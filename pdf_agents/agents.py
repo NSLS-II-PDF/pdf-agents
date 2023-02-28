@@ -3,6 +3,7 @@ from typing import Dict, List, Sequence, Tuple, Union
 
 import nslsii.kafka_utils
 import numpy as np
+import redis
 import tiled
 from bluesky_adaptive.agents.base import AgentConsumer
 from bluesky_adaptive.agents.simple import SequentialAgentBase
@@ -13,6 +14,7 @@ from numpy.typing import ArrayLike
 
 class PDFBaseAgent:
     def __init__(self, motor="Grid_X", exposure=30):
+        self._redis = redis.Redis(host="info.pdf.nsls2.bnl.gov")
         self._motor = motor
         self._exposure = exposure
 
@@ -37,7 +39,7 @@ class PDFBaseAgent:
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = np.array(run.primary.data["chi_I"][0])
-        return run.start["Grid_X"]["Grid_X"]["value"], y
+        return run.start[self._motor][self._motor]["value"], y
 
     @staticmethod
     def get_beamline_objects() -> dict:
