@@ -5,6 +5,7 @@ from databroker.client import BlueskyRun
 from sklearn.cluster import KMeans
 
 from .agents import PDFBaseAgent
+from .utils import discretize, make_hashable
 
 
 class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
@@ -108,3 +109,32 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
             new_x.append(convert_dict[x[i]])
 
         return new_x
+
+
+class ActiveKmeansAgent(PassiveKmeansAgent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
+
+    def tell(self, x, y):
+        self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
+        return super().tell(x, y)
+
+    def ask(self, batch_size=None):
+        # TODO: something clever
+        suggestions = ...
+        keep = []
+        for suggestion in suggestions:
+            if suggestion in self.knowledge_cache:
+                keep.append(False)
+                continue
+            else:
+                self.knowledge_cache.add(make_hashable(discretize(suggestion, self.motor_resolution)))
+                keep.append(True)
+        doc = dict(
+            latest_data=self.tell_cache[-1],
+            cache_len=self.independent_cache.shape[0],
+            suggestions=np.array(suggestions),
+            kept_suggestion=np.array(keep),
+        )
+        return doc, [suggestions[i] for i in range(len(keep)) if keep[i]]

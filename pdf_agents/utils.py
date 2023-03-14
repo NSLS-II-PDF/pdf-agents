@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class OfflineKafka:
     def set_agent(self, *args, **kwargs):
         pass
@@ -13,3 +16,11 @@ class OfflineKafka:
 
     def stop(self, *args, **kwargs):
         pass
+
+
+def discretize(value: np.typing.ArrayLike, resolution: np.typing.ArrayLike):
+    return np.floor(value / resolution)
+
+
+def make_hashable(x):
+    tuple(map(float, x))
