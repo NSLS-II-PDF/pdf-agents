@@ -12,6 +12,8 @@ from bluesky_kafka import Publisher
 from bluesky_queueserver_api.zmq import REManagerAPI
 from numpy.typing import ArrayLike
 
+from .utils import OfflineKafka
+
 
 class PDFBaseAgent(Agent, ABC):
     def __init__(
@@ -23,6 +25,7 @@ class PDFBaseAgent(Agent, ABC):
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
         roi: Optional[Tuple] = None,
+        offline=False,
         **kwargs,
     ):
         self._redis = redis.Redis(host="info.pdf.nsls2.bnl.gov")
@@ -32,7 +35,12 @@ class PDFBaseAgent(Agent, ABC):
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
-        super().__init__(*args, **kwargs)
+        if offline:
+            _default_kwargs = self.get_offline_objects()
+        else:
+            _default_kwargs = self.get_beamline_objects()
+        _default_kwargs.update(kwargs)
+        super().__init__(*args, **_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
         """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
@@ -162,6 +170,24 @@ class PDFBaseAgent(Agent, ABC):
             qserver=qs,
         )
 
+    @staticmethod
+    def get_offline_objects() -> dict:
+        """Objects to spin up agent with access to only tiled if available."""
+        beamline_tla = "pdf"
+        offline_kafka = OfflineKafka()
+        try:
+            node = tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox")
+        except tiled.profile.ProfileNotFound:
+            node = None
+
+        return dict(
+            kafka_consumer=offline_kafka,
+            kafka_producer=offline_kafka,
+            tiled_data_node=node,
+            tiled_agent_node=node,
+            qserver=None,
+        )
+
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
     def __init__(
@@ -171,6 +197,4 @@ class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
         relative_bounds: Tuple[Union[float, ArrayLike]] = None,
         **kwargs,
     ) -> None:
-        _default_kwargs = self.get_beamline_objects()
-        _default_kwargs.update(kwargs)
-        super().__init__(sequence=sequence, relative_bounds=relative_bounds, **_default_kwargs)
+        super().__init__(sequence=sequence, relative_bounds=relative_bounds, **kwargs)
