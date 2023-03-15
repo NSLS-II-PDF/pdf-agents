@@ -1,3 +1,5 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 from bluesky_adaptive.agents.sklearn import ClusterAgentBase
@@ -9,6 +11,8 @@ from sklearn.cluster import KMeans
 
 from .agents import PDFBaseAgent
 from .utils import discretize, make_hashable
+
+logger = logging.getLogger(__name__)
 
 
 class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
@@ -156,23 +160,26 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         # Chose from the polynomial fit
         suggestions = pick_from_distribution(_x, uwx, num_picks=batch_size)
 
-        keep = []
+        kept_suggestions = []
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
             if suggestion in self.knowledge_cache:
-                keep.append(False)
+                logger.info(f"Suggestion {suggestion} is ignored as already in the knowledge cache")
                 continue
             else:
                 self.knowledge_cache.add(make_hashable(discretize(suggestion, self.motor_resolution)))
-                keep.append(True)
-        doc = dict(
+                kept_suggestions.append(suggestion)
+
+        base_doc = dict(
             cluster_centers=centers,
             cache_len=self.independent_cache.shape[0],
             latest_data=self.tell_cache[-1],
-            suggestions=np.array(suggestions),
-            kept_suggestion=np.array(keep),
+            requested_batch_size=batch_size,
+            redundant_points_discarded=batch_size - len(kept_suggestions),
         )
-        return doc, [suggestions[i] for i in range(len(keep)) if keep[i]]
+        docs = [dict(suggestion=suggestion, **base_doc) for suggestion in kept_suggestions]
+
+        return docs, kept_suggestions
 
 
 def current_dist_gen(x, px):
