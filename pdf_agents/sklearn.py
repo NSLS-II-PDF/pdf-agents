@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bluesky_adaptive.agents.sklearn import ClusterAgentBase
 from databroker.client import BlueskyRun
+from numpy.polynomial.polynomial import polyfit, polyval
+from numpy.typing import ArrayLike
+from scipy.stats import rv_discrete
 from sklearn.cluster import KMeans
 
 from .agents import PDFBaseAgent
@@ -112,18 +115,49 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
 
 
 class ActiveKmeansAgent(PassiveKmeansAgent):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, bounds: ArrayLike, **kwargs):
         super().__init__(*args, **kwargs)
+        self._bounds = bounds
         self.knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
 
+    @property
+    def bounds(self):
+        return self._bounds
+
+    @bounds.set
+    def bounds(self, value: ArrayLike):
+        self._bounds = value
+
+    def server_registrations(self) -> None:
+        self._register_property("bounds")
+        return super().server_registrations()
+
     def tell(self, x, y):
+        """A tell that adds to the local discrete knowledge cache, as well as the standard caches"""
         self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
         return super().tell(x, y)
 
-    def ask(self, batch_size=None):
-        # TODO: something clever
-        suggestions = ...
+    def ask(self, batch_size=1):
+        # Borrowing from Dan's jupyter fun
+        # from measurements, perform k-means
+        sorted_independents, sorted_observables = zip(*sorted(zip(self.independent_cache, self.observable_cache)))
+        sorted_independents = np.array(sorted_independents)
+        sorted_observables = np.array(sorted_observables)
+        self.model.fit(sorted_observables)
+        # retreive centers
+        centers = self.model.cluster_centers_
+        # calculate distances of all measurements from the centers
+        distances = self.model.transform(sorted_observables)
+        # determine golf-score of each point (minimum value)
+        min_landscape = distances.min(axis=0)
+        # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
+        _x = np.arange(*self.bounds, self.motor_resolution)
+        uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
+        # Chose from the polynomial fit
+        suggestions = pick_from_distribution(_x, uwx, num_picks=batch_size)
+
         keep = []
+        # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
             if suggestion in self.knowledge_cache:
                 keep.append(False)
@@ -132,9 +166,42 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
                 self.knowledge_cache.add(make_hashable(discretize(suggestion, self.motor_resolution)))
                 keep.append(True)
         doc = dict(
-            latest_data=self.tell_cache[-1],
+            cluster_centers=centers,
             cache_len=self.independent_cache.shape[0],
+            latest_data=self.tell_cache[-1],
             suggestions=np.array(suggestions),
             kept_suggestion=np.array(keep),
         )
         return doc, [suggestions[i] for i in range(len(keep)) if keep[i]]
+
+
+def current_dist_gen(x, px):
+    """from distribution defined by p(x), produce a discrete generator.
+    This helper function will normalize px as required, and return the generator ready for use.
+
+    use:
+
+    my_gen = current_dist(gen(x,px))
+
+    my_gen.rvs() = xi # random variate of given type
+
+    where xi is a random discrete value, taken from the set x, with probability px.
+
+    my_gen.rvs(size=10) = np.array([xi1, xi2, ..., xi10]) # a size=10 array from distribution.
+
+    If you want to return the probability mass function:
+
+    my_gen.pmf
+
+    See more in scipy.stats.rv_discrete
+    """
+    px[px < 0] = 0  # ensure non-negativitiy
+    return rv_discrete(name="my_gen", values=(x, px / sum(px)))
+
+
+def pick_from_distribution(x, px, num_picks=1):
+    my_gen = current_dist_gen(x, px)
+    if num_picks != 1:
+        return my_gen.rvs(size=num_picks)
+    else:
+        return my_gen.rvs()
