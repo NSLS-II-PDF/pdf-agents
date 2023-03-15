@@ -1,3 +1,4 @@
+import logging
 from typing import List, Sequence, Tuple
 
 import numpy as np
@@ -5,6 +6,9 @@ from bluesky_adaptive.agents.base import MonarchSubjectAgent
 from matplotlib import ArrayLike
 
 from .sklearn import ActiveKmeansAgent
+from .utils import discretize, make_hashable
+
+logger = logging.getLogger(__name__)
 
 
 class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
@@ -48,6 +52,8 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         self.element_origins = np.array(element_origins)
         self.element_det_positions = np.array(element_det_positions)
         self.pdf_origin = np.array(pdf_origin)
+        self.subject_knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
+        super().__init__(*args, **kwargs)
 
     def subject_measurement_plan(self, relative_point: ArrayLike) -> Tuple[str, List, dict]:
         """Transform relative position into absolute position for plans"""
@@ -81,13 +87,30 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
 
         return self.bmm_measurement_plan_name, args, kwargs
 
-    def subject_ask(self, batch_size=1):
-        """Use default ask with minor modifications for BMM"""
-        doc, suggestions = super().ask(batch_size=batch_size)
-        doc["elements"] = self.elements
-        doc["element_origins"] = self.element_origins
-        doc["element_det_positions"] = self.element_det_positions
-        return doc, suggestions
+    def subject_ask(self, batch_size=1) -> Tuple[Sequence[dict[str, ArrayLike]], Sequence[ArrayLike]]:
+        """Copy default ask with minor modifications for BMM and subject cache"""
+        suggestions, centers = self._sample_uncertainty_proxy(batch_size)
+        kept_suggestions = []
+        # Keep non redundant suggestions and add to knowledge cache
+        for suggestion in suggestions:
+            if suggestion in self.subject_knowledge_cache:
+                logger.info(f"Suggestion {suggestion} is ignored as already in the subject knowledge cache")
+                continue
+            else:
+                self.subject_knowledge_cache.add(make_hashable(discretize(suggestion, self.motor_resolution)))
+                kept_suggestions.append(suggestion)
+        _default_doc = dict(
+            elements=self.elements,
+            element_origins=self.element_origins,
+            element_det_positions=self.element_det_positions,
+            cluster_centers=centers,
+            cache_len=self.independent_cache.shape[0],
+            latest_data=self.tell_cache[-1],
+            requested_batch_size=batch_size,
+            redundant_points_discarded=batch_size - len(kept_suggestions),
+        )
+        docs = [dict(suggestion=suggestion, **_default_doc) for suggestion in kept_suggestions]
+        return docs, suggestions
 
     def tell(self, x, y):
         """Update tell using relative info"""
@@ -96,13 +119,14 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         doc["absolute_position_offset"] = self.pdf_origin[0]
         return doc
 
-    def ask(self, batch_size=1):
+    def ask(self, batch_size=1) -> Tuple[Sequence[dict[str, ArrayLike]], Sequence[ArrayLike]]:
         """Update ask with relative info"""
-        doc, suggestions = super().ask(batch_size=batch_size)
-        doc["absolute_position_offset"] = self.pdf_origin[0]
-        return doc, suggestions
+        docs, suggestions = super().ask(batch_size=batch_size)
+        for doc in docs:
+            doc["absolute_position_offset"] = self.pdf_origin[0]
+        return docs, suggestions
 
     def measurement_plan(self, relative_point: ArrayLike) -> Tuple[str, List, dict]:
-        """Send measurement plan absolute point"""
+        """Send measurement plan absolute point from reltive position"""
         absolute_point = relative_point + self.pdf_origin[0]
         return super().measurement_plan(absolute_point)
