@@ -1,22 +1,38 @@
 import uuid
-from typing import Dict, List, Sequence, Tuple, Union
+from abc import ABC
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import nslsii.kafka_utils
 import numpy as np
 import redis
 import tiled
-from bluesky_adaptive.agents.base import AgentConsumer
+from bluesky_adaptive.agents.base import Agent, AgentConsumer
 from bluesky_adaptive.agents.simple import SequentialAgentBase
 from bluesky_kafka import Publisher
 from bluesky_queueserver_api.zmq import REManagerAPI
 from numpy.typing import ArrayLike
 
 
-class PDFBaseAgent:
-    def __init__(self, motor="Grid_X", exposure=30):
+class PDFBaseAgent(Agent, ABC):
+    def __init__(
+        self,
+        *args,
+        motor_name: str = "Grid_X",
+        motor_resolution: float = 0.0002,
+        exposure: float = 30.0,
+        data_key: str = "chi_I",
+        roi_key: str = "chi_Q",
+        roi: Optional[Tuple] = None,
+        **kwargs,
+    ):
         self._redis = redis.Redis(host="info.pdf.nsls2.bnl.gov")
-        self._motor = motor
+        self._motor_name = motor_name
+        self._motor_resolution = motor_resolution
         self._exposure = exposure
+        self._data_key = data_key
+        self._roi_key = roi_key
+        self._roi = roi
+        super().__init__(*args, **kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
         """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
@@ -35,11 +51,83 @@ class PDFBaseAgent:
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        return "agent_sample_count", [self._motor, point, self._exposure], dict(sample_number=0)
+        # TODO: get sample number from redis
+        return "agent_sample_count", [self.motor_name, point, self.exposure_time], dict(sample_number=0)
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
-        y = np.array(run.primary.data["chi_I"][0])
-        return run.start[self._motor][self._motor]["value"], y
+        y = run.primary.data[self.data_key].read().flatten()
+        if self.roi is not None:
+            ordinate = np.array(run.primary.data[self.roi_key]).flatten()
+            idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
+            idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
+            y = y[idx_min:idx_max]
+        return run.start[self.motor_name][self.motor_name]["value"], y
+
+    def server_registrations(self) -> None:
+        self._register_property("motor_resolution")
+        self._register_property("motor_name")
+        self._register_property("exposure_time")
+        self._register_property("data_key")
+        self._register_property("roi_key")
+        self._register_property("roi")
+        return super().server_registrations()
+
+    @property
+    def motor_name(self):
+        """Name of motor to be used as the independent variable in the experiment"""
+        return self._motor_name
+
+    @motor_name.setter
+    def motor_name(self, value: str):
+        self._motor_name = value
+
+    @property
+    def motor_resolution(self):
+        """Minimum resolution for measurement in milimeters, i.e. (beam width)/2"""
+        return self._motor_resolution
+
+    @motor_resolution.setter
+    def motor_resolution(self, value: float):
+        self._motor_resolution = value
+
+    @property
+    def exposure_time(self):
+        """Exposure time of scans in seconds"""
+        return self._exposure
+
+    @exposure_time.setter
+    def exposure_time(self, value: float):
+        self._exposure = value
+
+    @property
+    def data_key(self):
+        return self._data_key
+
+    @data_key.setter
+    def data_key(self, value: str):
+        self._data_key = value
+        self.close_and_restart(clear_tell_cache=True)
+        # TODO: Ensure a clear caches method is built in here for subclass
+
+    @property
+    def roi_key(self):
+        return self._roi_key
+
+    @roi_key.setter
+    def roi_key(self, value: str):
+        self._roi_key = value
+        self.close_and_restart(clear_tell_cache=True)
+        # TODO: Ensure a clear caches method is built in here for subclass
+
+    @property
+    def roi(self):
+        return self._roi_key
+
+    @roi.setter
+    def roi(self, value: Tuple[float, float]):
+        self._roi = value
+        self.close_and_restart(clear_tell_cache=True)
+        # TODO: Ensure a clear caches method is built in here for subclass
 
     @staticmethod
     def get_beamline_objects() -> dict:
