@@ -57,9 +57,9 @@ class PDFBaseAgent(Agent, ABC):
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
         if self.roi is not None:
-            q = np.array(run.primary.data[self.data_key]).flatten()
-            idx_min = np.where(q < self.roi[0])[0][-1] if len(np.where(q < self.roi[0])[0]) else None
-            idx_max = np.where(q > self.roi[1])[0][-1] if len(np.where(q > self.roi[1])[0]) else None
+            ordinate = np.array(run.primary.data[self.roi_key]).flatten()
+            idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
+            idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
         return run.start[self.motor_name][self.motor_name]["value"], y
 
