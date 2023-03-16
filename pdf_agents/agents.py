@@ -115,7 +115,6 @@ class PDFBaseAgent(Agent, ABC):
     def data_key(self, value: str):
         self._data_key = value
         self.close_and_restart(clear_tell_cache=True)
-        # TODO: Ensure a clear caches method is built in here for subclass
 
     @property
     def roi_key(self):
@@ -125,7 +124,6 @@ class PDFBaseAgent(Agent, ABC):
     def roi_key(self, value: str):
         self._roi_key = value
         self.close_and_restart(clear_tell_cache=True)
-        # TODO: Ensure a clear caches method is built in here for subclass
 
     @property
     def roi(self):
@@ -135,7 +133,6 @@ class PDFBaseAgent(Agent, ABC):
     def roi(self, value: Tuple[float, float]):
         self._roi = value
         self.close_and_restart(clear_tell_cache=True)
-        # TODO: Ensure a clear caches method is built in here for subclass
 
     @staticmethod
     def get_beamline_objects() -> dict:
@@ -158,7 +155,7 @@ class PDFBaseAgent(Agent, ABC):
         kafka_producer = Publisher(
             topic=f"{beamline_tla}.bluesky.adjudicators",
             bootstrap_servers=kafka_config["bootstrap_servers"],
-            key="cms.key",
+            key="{beamline_tla}.key",
             producer_config=kafka_config["runengine_producer_config"],
         )
 

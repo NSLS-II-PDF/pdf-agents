@@ -47,13 +47,42 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         >>>         pdf_origin = (69.2, 2.0),
         >>>         bounds=[-30, 30])
         """
-        # TODO: Make these parameters
         self.elements = elements
         self.element_origins = np.array(element_origins)
         self.element_det_positions = np.array(element_det_positions)
         self.pdf_origin = np.array(pdf_origin)
         self.subject_knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
         super().__init__(*args, **kwargs)
+
+    @property
+    def elements(self):
+        return self._elements
+
+    @elements.setter
+    def elements(self, value: Sequence[str]):
+        self._elements = value
+
+    @property
+    def element_origins(self):
+        return self._element_origins
+
+    @element_origins.setter
+    def element_origins(self, value: Sequence[Tuple[float, float]]):
+        self._elements_origins = np.array(value)
+
+    @property
+    def element_det_positions(self):
+        return self._element_det_positions
+
+    @element_det_positions.setter
+    def element_det_positions(self, value: Sequence[float]):
+        self._element_det_positions = np.array(value)
+
+    def server_registrations(self) -> None:
+        self._register_property("elements")
+        self._register_property("element_origins")
+        self._register_property("element_det_positions")
+        return super().server_registrations()
 
     def subject_measurement_plan(self, relative_point: ArrayLike) -> Tuple[str, List, dict]:
         """Transform relative position into absolute position for plans"""
