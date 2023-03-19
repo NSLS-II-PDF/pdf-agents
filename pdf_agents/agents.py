@@ -1,3 +1,4 @@
+import ast
 import uuid
 from abc import ABC
 from logging import getLogger
@@ -30,7 +31,7 @@ class PDFBaseAgent(Agent, ABC):
         offline=False,
         **kwargs,
     ):
-        self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov")  # redis key value store
+        self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
         self._motor_name = motor_name
         self._motor_resolution = motor_resolution
         self._data_key = data_key
@@ -39,6 +40,12 @@ class PDFBaseAgent(Agent, ABC):
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
+        self._background = np.array(
+            [
+                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+            ]
+        )
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
@@ -71,6 +78,7 @@ class PDFBaseAgent(Agent, ABC):
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
+        y = y - self.background[1]
         if self.roi is not None:
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
@@ -86,6 +94,7 @@ class PDFBaseAgent(Agent, ABC):
         self._register_property("data_key")
         self._register_property("roi_key")
         self._register_property("roi")
+        self._register_property("background")
         return super().server_registrations()
 
     @property
@@ -139,6 +148,24 @@ class PDFBaseAgent(Agent, ABC):
     def sample_number(self, value: int):
         self._sample_number = value
         self._rkvs.set("PDF:xpdacq:sample_number", value)
+
+    @property
+    def background(self):
+        self._background = np.array(
+            [
+                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+            ]
+        )
+        return self._background
+
+    @background.setter
+    def background(self, arr):
+        self._rkvs.set("PDF:bgd:x", str(list(arr[0, :])))
+        self._rkvs.set("PDF:bgd:y", str(list(arr[1, :])))
+        self._background = np.array(arr)
+        if self._background.shape[0] != 2:
+            raise ValueError("Background array should have shape [2, N]")
 
     @property
     def data_key(self):
