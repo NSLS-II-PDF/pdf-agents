@@ -1,5 +1,6 @@
 import uuid
 from abc import ABC
+from logging import getLogger
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import nslsii.kafka_utils
@@ -14,6 +15,8 @@ from numpy.typing import ArrayLike
 
 from .utils import OfflineKafka
 
+logger = getLogger(__name__)
+
 
 class PDFBaseAgent(Agent, ABC):
     def __init__(
@@ -21,20 +24,21 @@ class PDFBaseAgent(Agent, ABC):
         *args,
         motor_name: str = "Grid_X",
         motor_resolution: float = 0.0002,
-        exposure: float = 30.0,
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
         roi: Optional[Tuple] = None,
         offline=False,
         **kwargs,
     ):
-        self._redis = redis.Redis(host="info.pdf.nsls2.bnl.gov")
+        self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov")  # redis key value store
         self._motor_name = motor_name
         self._motor_resolution = motor_resolution
-        self._exposure = exposure
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
+        # Attributes pulled in from Redis
+        self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
+        self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
@@ -59,8 +63,11 @@ class PDFBaseAgent(Agent, ABC):
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        # TODO: get sample number from redis
-        return "agent_sample_count", [self.motor_name, point, self.exposure_time], dict(sample_number=0)
+        return (
+            "agent_sample_count",
+            [self.motor_name, point, self.exposure_time],
+            dict(sample_number=self.sample_number),
+        )
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
@@ -75,6 +82,7 @@ class PDFBaseAgent(Agent, ABC):
         self._register_property("motor_resolution")
         self._register_property("motor_name")
         self._register_property("exposure_time")
+        self._register_property("sample_number")
         self._register_property("data_key")
         self._register_property("roi_key")
         self._register_property("roi")
@@ -101,11 +109,36 @@ class PDFBaseAgent(Agent, ABC):
     @property
     def exposure_time(self):
         """Exposure time of scans in seconds"""
+        value = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
+        if value != self._exposure:
+            logger.warning(
+                f"Mismatch between agent exposure time ({self._exposure}) and redis value {value}. "
+                "Updating to redis value."
+            )
+            self._exposure = value
         return self._exposure
 
     @exposure_time.setter
     def exposure_time(self, value: float):
         self._exposure = value
+        self._rkvs.set("PDF:desired_exposure_time", value)
+
+    @property
+    def sample_number(self):
+        """XPDAQ Sample Number"""
+        value = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
+        if value != self._sample_number:
+            logger.warning(
+                f"Mismatch between agent sample_number ({self._sample_number}) and redis value {value}. "
+                "Updating to redis value."
+            )
+            self._sample_number = value
+        return self._sample_number
+
+    @sample_number.setter
+    def sample_number(self, value: int):
+        self._sample_number = value
+        self._rkvs.set("PDF:xpdacq:sample_number", value)
 
     @property
     def data_key(self):
