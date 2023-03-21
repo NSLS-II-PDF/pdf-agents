@@ -128,7 +128,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def bounds(self):
         return self._bounds
 
-    @bounds.set
+    @bounds.setter
     def bounds(self, value: ArrayLike):
         self._bounds = value
 
