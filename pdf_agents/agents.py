@@ -58,7 +58,7 @@ class PDFBaseAgent(Agent, ABC):
             roi_key=self.roi_key,
             roi=self.roi,
         )
-        super().__init__(*args, metadata=md**_default_kwargs)
+        super().__init__(*args, metadata=md, **_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
         """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
