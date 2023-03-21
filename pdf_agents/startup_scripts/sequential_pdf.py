@@ -2,7 +2,9 @@ from bluesky_adaptive.server import shutdown_decorator, startup_decorator
 
 from pdf_agents.agents import PDFSequentialAgent
 
-agent = PDFSequentialAgent(sequence=[0.0, 0.1, 0.3], ask_on_tell=False, report_on_tell=True, direct_to_queue=False)
+agent = PDFSequentialAgent(
+    sequence=[40.0, 45.0, 48.0], ask_on_tell=True, report_on_tell=True, direct_to_queue=True
+)
 
 
 @startup_decorator
