@@ -3,6 +3,7 @@ from typing import List, Sequence, Tuple
 
 import numpy as np
 from bluesky_adaptive.agents.base import MonarchSubjectAgent
+from bmm_agents.base import BMMBaseAgent
 from matplotlib import ArrayLike
 
 from .sklearn import ActiveKmeansAgent
@@ -85,36 +86,7 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         return super().server_registrations()
 
     def subject_measurement_plan(self, relative_point: ArrayLike) -> Tuple[str, List, dict]:
-        """Transform relative position into absolute position for plans"""
-        args = [
-            self.bmm_sample_position_motors[0],
-            *(self.element_origins[:, 0] + relative_point),
-            self.bmm_sample_position_motors[1],
-            *self.element_origins[:, 1],
-        ]
-
-        kwargs = dict(
-            filename="MultimodalMadnessSpring23",
-            nscans=1,
-            start="next",
-            mode="fluorescence",
-            edge="K",
-            sample="CuTi",
-            preparation="film sputtered on silica",
-            bounds="-200 -30 -10 25 12k",
-            steps="10 2 0.3 0.05k",
-            times="0.5 0.5 0.5 0.5",
-            snapshots=False,
-            md={"relative_position": relative_point},
-        )
-        kwargs.update(
-            {
-                f"{element}_det_position": det_position
-                for element, det_position in zip(self.elements, self.element_det_positions)
-            }
-        )
-
-        return self.bmm_measurement_plan_name, args, kwargs
+        return BMMBaseAgent.measurement_plan(self, relative_point)
 
     def subject_ask(self, batch_size=1) -> Tuple[Sequence[dict[str, ArrayLike]], Sequence[ArrayLike]]:
         """Copy default ask with minor modifications for BMM and subject cache"""
