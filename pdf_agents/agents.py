@@ -201,7 +201,7 @@ class PDFBaseAgent(Agent, ABC):
             config_file_path="/etc/bluesky/kafka.yml"
         )
         qs = REManagerAPI(http_server_uri=f"https://qserver.nsls2.bnl.gov/{beamline_tla}")
-        qs.set_authorization_key(api_key=None)
+        qs.set_authorization_key(api_key="yyyyy")
 
         kafka_consumer = AgentConsumer(
             topics=[
