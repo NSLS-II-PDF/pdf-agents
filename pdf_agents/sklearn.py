@@ -141,7 +141,19 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
         return super().tell(x, y)
 
-    def ask(self, batch_size=1):
+    def _sample_uncertainty_proxy(self, batch_size=1):
+        """Some Dan Olds magic to cast the distance from a cluster as an uncertainty. Then sample there
+
+        Parameters
+        ----------
+        batch_size : int, optional
+
+        Returns
+        -------
+        samples : ArrayLike
+        centers : ArrayLike
+            Kmeans centers for logging
+        """
         # Borrowing from Dan's jupyter fun
         # from measurements, perform k-means
         sorted_independents, sorted_observables = zip(*sorted(zip(self.independent_cache, self.observable_cache)))
@@ -158,8 +170,10 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         _x = np.arange(*self.bounds, self.motor_resolution)
         uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
         # Chose from the polynomial fit
-        suggestions = pick_from_distribution(_x, uwx, num_picks=batch_size)
+        return pick_from_distribution(_x, uwx, num_picks=batch_size), centers
 
+    def ask(self, batch_size=1):
+        suggestions, centers = self._sample_uncertainty_proxy(batch_size)
         kept_suggestions = []
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
