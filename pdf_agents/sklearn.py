@@ -167,7 +167,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         # calculate distances of all measurements from the centers
         distances = self.model.transform(sorted_observables)
         # determine golf-score of each point (minimum value)
-        min_landscape = distances.min(axis=0)
+        min_landscape = distances.min(axis=1)
         # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
         _x = np.arange(*self.bounds, self.motor_resolution)
         uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
