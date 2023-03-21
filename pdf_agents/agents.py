@@ -222,8 +222,12 @@ class PDFBaseAgent(Agent, ABC):
         return dict(
             kafka_consumer=kafka_consumer,
             kafka_producer=kafka_producer,
-            tiled_data_node=tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox"),
-            tiled_agent_node=tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox"),
+            tiled_data_node=tiled.client.from_uri(
+                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+            ),
+            tiled_agent_node=tiled.client.from_uri(
+                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+            ),
             qserver=qs,
         )
 
