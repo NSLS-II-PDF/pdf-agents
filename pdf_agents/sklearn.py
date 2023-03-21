@@ -1,4 +1,5 @@
 import logging
+from typing import Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -177,6 +178,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def ask(self, batch_size=1):
         suggestions, centers = self._sample_uncertainty_proxy(batch_size)
         kept_suggestions = []
+        if not isinstance(suggestions, Iterable):
+            suggestions = [suggestions]
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
             if suggestion in self.knowledge_cache:
