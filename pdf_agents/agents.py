@@ -11,7 +11,7 @@ import tiled
 from bluesky_adaptive.agents.base import Agent, AgentConsumer
 from bluesky_adaptive.agents.simple import SequentialAgentBase
 from bluesky_kafka import Publisher
-from bluesky_queueserver_api.zmq import REManagerAPI
+from bluesky_queueserver_api.http import REManagerAPI
 from numpy.typing import ArrayLike
 
 from .utils import OfflineKafka
