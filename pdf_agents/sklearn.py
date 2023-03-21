@@ -139,7 +139,9 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def tell(self, x, y):
         """A tell that adds to the local discrete knowledge cache, as well as the standard caches"""
         self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
-        return super().tell(x, y)
+        doc = super().tell(x, y)
+        doc["background"] = self.background
+        return doc
 
     def _sample_uncertainty_proxy(self, batch_size=1):
         """Some Dan Olds magic to cast the distance from a cluster as an uncertainty. Then sample there
