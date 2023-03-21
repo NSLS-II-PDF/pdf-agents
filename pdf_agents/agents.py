@@ -51,7 +51,14 @@ class PDFBaseAgent(Agent, ABC):
         else:
             _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
-        super().__init__(*args, **_default_kwargs)
+        md = dict(
+            motor_name=self.motor_name,
+            motor_resolution=self.motor_resolution,
+            data_key=self.data_key,
+            roi_key=self.roi_key,
+            roi=self.roi,
+        )
+        super().__init__(*args, metadata=md**_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
         """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
