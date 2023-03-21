@@ -187,7 +187,7 @@ class PDFBaseAgent(Agent, ABC):
 
     @property
     def roi(self):
-        return self._roi_key
+        return self._roi
 
     @roi.setter
     def roi(self, value: Tuple[float, float]):
