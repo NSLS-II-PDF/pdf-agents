@@ -208,13 +208,13 @@ class PDFBaseAgent(Agent, ABC):
                 f"{beamline_tla}.bluesky.pdfstream.documents",
             ],
             consumer_config=kafka_config["runengine_producer_config"],
-            bootstrap_servers=kafka_config["bootstrap_servers"],
+            bootstrap_servers=",".join(kafka_config["bootstrap_servers"]),
             group_id=f"echo-{beamline_tla}-{str(uuid.uuid4())[:8]}",
         )
 
         kafka_producer = Publisher(
             topic=f"{beamline_tla}.bluesky.adjudicators",
-            bootstrap_servers=kafka_config["bootstrap_servers"],
+            bootstrap_servers=",".join(kafka_config["bootstrap_servers"]),
             key="{beamline_tla}.key",
             producer_config=kafka_config["runengine_producer_config"],
         )
