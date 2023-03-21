@@ -259,3 +259,8 @@ class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
         **kwargs,
     ) -> None:
         super().__init__(sequence=sequence, relative_bounds=relative_bounds, **kwargs)
+
+    def tell(self, x, y) -> Dict[str, ArrayLike]:
+        doc = super().tell(x, y)
+        doc["background"] = self.background
+        return doc
