@@ -4,7 +4,7 @@ from typing import List, Literal, Sequence, Tuple
 import numpy as np
 from bluesky_adaptive.agents.base import MonarchSubjectAgent
 from bmm_agents.base import BMMBaseAgent
-from matplotlib import ArrayLike
+from numpy.typing import ArrayLike
 
 from .sklearn import ActiveKmeansAgent
 from .utils import discretize, make_hashable
