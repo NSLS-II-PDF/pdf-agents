@@ -61,7 +61,7 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
             self,
             filename=filename,
             exp_mode=exp_mode,
-            exp_data_typ=exp_data_type,
+            exp_data_type=exp_data_type,
             elements=elements,
             edges=edges,
             element_origins=element_origins,
