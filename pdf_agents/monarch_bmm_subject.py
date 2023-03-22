@@ -57,21 +57,20 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         >>>         pdf_origin = (69.2, 2.0),
         >>>         bounds=[-30, 30])
         """
-        BMMBaseAgent.__init__(
-            self,
-            filename=filename,
-            exp_mode=exp_mode,
-            exp_data_type=exp_data_type,
-            elements=elements,
-            edges=edges,
-            element_origins=element_origins,
-            element_det_positions=element_det_positions,
-            sample=sample,
-            preparation=preparation,
-            exp_bounds=exp_bounds,
-            exp_steps=exp_steps,
-            exp_times=exp_times,
-        )
+        self._filename = filename
+        self._edges = edges
+        self._exp_mode = exp_mode
+        self._abscissa = exp_data_type
+        self._ordinate = "k" if exp_data_type == "chi" else "energy"
+        self._elements = elements
+        self._element_origins = np.array(element_origins)
+        self._element_det_positions = np.array(element_det_positions)
+
+        self._sample = sample
+        self._preparation = preparation
+        self._exp_bounds = exp_bounds
+        self._exp_steps = exp_steps
+        self._exp_times = exp_times
         self.pdf_origin = np.array(pdf_origin)
         self.subject_knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
         super().__init__(*args, **kwargs)
