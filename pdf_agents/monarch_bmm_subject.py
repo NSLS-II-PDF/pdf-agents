@@ -76,6 +76,10 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         super().__init__(*args, **kwargs)
 
     @property
+    def name(self):
+        "KMeansPDFMonarchBMMSubject"
+
+    @property
     def filename(self):
         return self._filename
 
