@@ -15,7 +15,7 @@ class TimedAgent(KMeansMonarchSubject):
         super().__init__(self, *args, **kwargs)
 
     def subject_ask_condition(self):
-        if ttime.now() - self.last_time > 60 * 10:
+        if ttime.time() - self.last_time > 60 * 10:
             self.last_time = ttime.time()
             return True
         else:
