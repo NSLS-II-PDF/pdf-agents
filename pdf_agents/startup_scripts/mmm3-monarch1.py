@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import numpy as np
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 from bmm_agents.base import BMMBaseAgent
 
@@ -33,6 +36,13 @@ agent = KMeansMonarchSubject(
 @startup_decorator
 def startup():
     agent.start()
+    path = Path(__file__).parent / "historical_uids.txt"
+    with open(path, "r") as f:
+        uids = []
+        for line in f:
+            uids.append(line.strip().strip(","))
+
+    agent.tell_agent_by_uid(np.random.choice(uids, 50))
 
 
 @shutdown_decorator
