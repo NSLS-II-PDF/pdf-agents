@@ -1,5 +1,5 @@
 import logging
-from typing import List, Literal, Sequence, Tuple
+from typing import Iterable, List, Literal, Sequence, Tuple
 
 import numpy as np
 from bluesky_adaptive.agents.base import MonarchSubjectAgent
@@ -206,6 +206,8 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         """Copy default ask with minor modifications for BMM and subject cache"""
         suggestions, centers = self._sample_uncertainty_proxy(batch_size)
         kept_suggestions = []
+        if not isinstance(suggestions, Iterable):
+            suggestions = [suggestions]
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
             if suggestion in self.subject_knowledge_cache:
