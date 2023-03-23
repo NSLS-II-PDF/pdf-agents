@@ -11,12 +11,12 @@ bmm_objects = BMMBaseAgent.get_beamline_objects()
 
 class TimedAgent(KMeansMonarchSubject):
     def __init__(self, *args, **kwargs):
-        self.last_time = ttime.now()
+        self.last_time = ttime.time()
         super().__init__(self, *args, **kwargs)
 
     def subject_ask_condition(self):
         if ttime.now() - self.last_time > 60 * 10:
-            self.last_time = ttime.now()
+            self.last_time = ttime.time()
             return True
         else:
             return False
