@@ -61,13 +61,13 @@ class PDFBaseAgent(Agent, ABC):
         super().__init__(*args, metadata=md, **_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
-        """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
-        agent_sample_count(motor, position: float, exposure: float, *, sample_number: int, md=None):
+        """Default measurement plan is an agent modified simple count  of pe1c,
+        that uses redis to fill in key values like exposure time and sample number.
 
         Parameters
         ----------
         point : ArrayLike
-            Next point to measure using a given plan
+            Next point to measure using a given plan, given in absolute coordinates.
 
         Returns
         -------
@@ -77,11 +77,7 @@ class PDFBaseAgent(Agent, ABC):
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        return (
-            "agent_sample_count",
-            [self.motor_name, point, self.exposure_time],
-            dict(sample_number=self.sample_number),
-        )
+        return "agent_redisAware_XRDcount", [point], {}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
@@ -91,7 +87,11 @@ class PDFBaseAgent(Agent, ABC):
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
-        return run.start["more_info"][self.motor_name][self.motor_name]["value"], y
+        try:
+            x = run.start["more_info"][self.motor_name][self.motor_name]["value"]
+        except KeyError:
+            x = run.start[self.motor_name][self.motor_name]["value"]
+        return x, y
 
     def server_registrations(self) -> None:
         self._register_property("motor_resolution")
@@ -122,39 +122,39 @@ class PDFBaseAgent(Agent, ABC):
     def motor_resolution(self, value: float):
         self._motor_resolution = value
 
-    @property
-    def exposure_time(self):
-        """Exposure time of scans in seconds"""
-        value = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
-        if value != self._exposure:
-            logger.warning(
-                f"Mismatch between agent exposure time ({self._exposure}) and redis value {value}. "
-                "Updating to redis value."
-            )
-            self._exposure = value
-        return self._exposure
+    # @property
+    # def exposure_time(self):
+    #     """Exposure time of scans in seconds"""
+    #     value = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
+    #     if value != self._exposure:
+    #         logger.warning(
+    #             f"Mismatch between agent exposure time ({self._exposure}) and redis value {value}. "
+    #             "Updating to redis value."
+    #         )
+    #         self._exposure = value
+    #     return self._exposure
 
-    @exposure_time.setter
-    def exposure_time(self, value: float):
-        self._exposure = value
-        self._rkvs.set("PDF:desired_exposure_time", value)
+    # @exposure_time.setter
+    # def exposure_time(self, value: float):
+    #     self._exposure = value
+    #     self._rkvs.set("PDF:desired_exposure_time", value)
 
-    @property
-    def sample_number(self):
-        """XPDAQ Sample Number"""
-        value = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
-        if value != self._sample_number:
-            logger.warning(
-                f"Mismatch between agent sample_number ({self._sample_number}) and redis value {value}. "
-                "Updating to redis value."
-            )
-            self._sample_number = value
-        return self._sample_number
+    # @property
+    # def sample_number(self):
+    #     """XPDAQ Sample Number"""
+    #     value = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
+    #     if value != self._sample_number:
+    #         logger.warning(
+    #             f"Mismatch between agent sample_number ({self._sample_number}) and redis value {value}. "
+    #             "Updating to redis value."
+    #         )
+    #         self._sample_number = value
+    #     return self._sample_number
 
-    @sample_number.setter
-    def sample_number(self, value: int):
-        self._sample_number = value
-        self._rkvs.set("PDF:xpdacq:sample_number", value)
+    # @sample_number.setter
+    # def sample_number(self, value: int):
+    #     self._sample_number = value
+    #     self._rkvs.set("PDF:xpdacq:sample_number", value)
 
     @property
     def background(self):
@@ -166,13 +166,13 @@ class PDFBaseAgent(Agent, ABC):
         )
         return self._background
 
-    @background.setter
-    def background(self, arr):
-        self._rkvs.set("PDF:bgd:x", str(list(arr[0, :])))
-        self._rkvs.set("PDF:bgd:y", str(list(arr[1, :])))
-        self._background = np.array(arr)
-        if self._background.shape[0] != 2:
-            raise ValueError("Background array should have shape [2, N]")
+    # @background.setter
+    # def background(self, arr):
+    #     self._rkvs.set("PDF:bgd:x", str(list(arr[0, :])))
+    #     self._rkvs.set("PDF:bgd:y", str(list(arr[1, :])))
+    #     self._background = np.array(arr)
+    #     if self._background.shape[0] != 2:
+    #         raise ValueError("Background array should have shape [2, N]")
 
     @property
     def data_key(self):
@@ -255,6 +255,13 @@ class PDFBaseAgent(Agent, ABC):
             tiled_agent_node=node,
             qserver=None,
         )
+
+    def trigger_condition(self, uid) -> bool:
+        try:
+            det_pos = self.exp_catalog[uid].start["more_info"]["Det_1_Z"]["Det_1_Z"]["value"]
+        except KeyError:
+            det_pos = self.exp_catalog[uid].start["Det_1_Z"]["Det_1_Z"]["value"]
+        return det_pos > 4_000.0
 
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
