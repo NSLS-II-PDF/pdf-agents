@@ -36,7 +36,7 @@ agent = KMeansMonarchSubject(
 @startup_decorator
 def startup():
     agent.start()
-    path = Path(__file__).parent / "historical_uids.txt"
+    path = "/nsls2/data/pdf/shared/config/source/pdf-agents/pdf_agents/startup_scripts/" / "historical_uids.txt"
     with open(path, "r") as f:
         uids = []
         for line in f:
