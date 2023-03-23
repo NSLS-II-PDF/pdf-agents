@@ -1,4 +1,4 @@
-from bluesky_adaptive.server import shutdown_decorator, startup_decorator
+from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 from bmm_agents.base import BMMBaseAgent
 
 from pdf_agents.monarch_bmm_subject import KMeansMonarchSubject
@@ -38,3 +38,7 @@ def startup():
 @shutdown_decorator
 def shutdown_agent():
     return agent.stop()
+
+
+register_variable("tell cache", agent, "tell_cache")
+register_variable("agent name", agent, "instance_name")
