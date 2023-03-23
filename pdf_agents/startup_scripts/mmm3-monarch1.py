@@ -53,7 +53,7 @@ def startup():
     with open(path, "r") as f:
         uids = []
         for line in f:
-            uids.append(line.strip().strip(","))
+            uids.append(line.strip().strip(",").strip("'"))
 
     agent.tell_agent_by_uid(np.random.choice(uids, 50))
     agent.ask_on_tell = True
