@@ -91,7 +91,7 @@ class PDFBaseAgent(Agent, ABC):
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
-        return run.start[self.motor_name][self.motor_name]["value"], y
+        return run.start["more_info"][self.motor_name][self.motor_name]["value"], y
 
     def server_registrations(self) -> None:
         self._register_property("motor_resolution")
