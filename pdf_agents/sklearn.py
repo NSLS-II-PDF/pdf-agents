@@ -191,9 +191,11 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
 
         base_doc = dict(
             cluster_centers=centers,
-            cache_len=len(self.independent_cache)
-            if isinstance(self.independent_cache, list)
-            else self.independent_cache.shape[0],
+            cache_len=(
+                len(self.independent_cache)
+                if isinstance(self.independent_cache, list)
+                else self.independent_cache.shape[0]
+            ),
             latest_data=self.tell_cache[-1],
             requested_batch_size=batch_size,
             redundant_points_discarded=batch_size - len(kept_suggestions),

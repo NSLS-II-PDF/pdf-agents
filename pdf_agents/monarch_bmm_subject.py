@@ -221,7 +221,11 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
             element_origins=self.element_origins,
             element_det_positions=self.element_det_positions,
             cluster_centers=centers,
-            cache_len=self.independent_cache.shape[0],
+            cache_len=(
+                len(self.independent_cache)
+                if isinstance(self.independent_cache, list)
+                else self.independent_cache.shape[0]
+            ),
             latest_data=self.tell_cache[-1],
             requested_batch_size=batch_size,
             redundant_points_discarded=batch_size - len(kept_suggestions),
