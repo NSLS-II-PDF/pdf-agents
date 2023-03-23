@@ -24,8 +24,8 @@ agent = KMeansMonarchSubject(
     subject_endstation_key="bmm",
     pdf_origin=(17.574, 4.075),
     bounds=(-29, 29),
-    ask_on_tell=True,
-    report_on_tell=True,
+    ask_on_tell=False,
+    report_on_tell=False,
     k_clusters=6,
 )
 
