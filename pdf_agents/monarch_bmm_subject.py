@@ -235,7 +235,7 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
             redundant_points_discarded=batch_size - len(kept_suggestions),
         )
         docs = [dict(suggestion=suggestion, **_default_doc) for suggestion in kept_suggestions]
-        return docs, suggestions
+        return docs, kept_suggestions
 
     def tell(self, x, y):
         """Update tell using relative info"""
