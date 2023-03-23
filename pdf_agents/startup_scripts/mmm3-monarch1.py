@@ -1,4 +1,4 @@
-from pathlib import Path
+import time as ttime
 
 import numpy as np
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
@@ -9,7 +9,20 @@ from pdf_agents.monarch_bmm_subject import KMeansMonarchSubject
 bmm_objects = BMMBaseAgent.get_beamline_objects()
 
 
-agent = KMeansMonarchSubject(
+class TimedAgent(KMeansMonarchSubject):
+    def __init__(self, *args, **kwargs):
+        self.last_time = ttime.now()
+        super().__init__(self, *args, **kwargs)
+
+    def subject_ask_condition(self):
+        if ttime.now() - self.last_time > 60 * 10:
+            self.last_time = ttime.now()
+            return True
+        else:
+            return False
+
+
+agent = TimedAgent(
     filename="Pt-Zr-Multimodal",
     exp_mode="fluorescence",
     exp_data_type="mu",
@@ -28,7 +41,7 @@ agent = KMeansMonarchSubject(
     pdf_origin=(17.574, 4.075),
     bounds=(-29, 29),
     ask_on_tell=False,
-    report_on_tell=False,
+    report_on_tell=True,
     k_clusters=6,
 )
 
@@ -43,6 +56,9 @@ def startup():
             uids.append(line.strip().strip(","))
 
     agent.tell_agent_by_uid(np.random.choice(uids, 50))
+    agent.ask_on_tell = True
+    agent.add_suggestions_to_queue(3)
+    agent.add_suggestions_to_subject_queue(1)
 
 
 @shutdown_decorator
