@@ -104,6 +104,9 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         super().start(*args, **kwargs)
 
     def _value_function(self, X, Y):
+        if len(X.shape) == 1:
+            X = X.reshape(-1, 1)
+
         return scientific_value_function(X, Y, y_distance_function=self.observable_distance_function)
 
     def tell(self, x, y):
