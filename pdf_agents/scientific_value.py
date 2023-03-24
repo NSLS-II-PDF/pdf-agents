@@ -1,10 +1,10 @@
-import importlib
 from abc import ABC
 from logging import getLogger
 from typing import Callable, Optional
 
 import numpy as np
 import torch
+from bluesky_adaptive.server import register_variable
 from botorch import fit_gpytorch_mll
 from botorch.acquisition import UpperConfidenceBound, qUpperConfidenceBound
 from botorch.models import SingleTaskGP
@@ -95,17 +95,11 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         self.ucb_beta = ucb_beta
 
     def server_registrations(self) -> None:
+        register_variable("ucb_beta", self)
         super().server_registrations()
-        self._register_method("update_acquisition_function")
-
-    def update_acquisition_function(self, acqf_name, **kwargs):
-        module = importlib.import_module("botorch.acquisition")
-        self.acqf_name = acqf_name
-        self._partial_acqf = lambda gp: getattr(module, acqf_name)(gp, **kwargs)
-        self.close_and_restart()
 
     def start(self, *args, **kwargs):
-        _md = dict(acqf_name=self.acqf_name)
+        _md = dict(acqf_name="UpperConfidenceBound")
         self.metadata.update(_md)
         super().start(*args, **kwargs)
 
