@@ -120,8 +120,10 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         value = self._value_function(np.array(self.independent_cache), np.array(self.observable_cache))
         value = value.reshape(-1, 1)
 
-        train_x = torch.tensor(self.independent_cache, dtype=torch.float, device=self.device)
-        train_y = torch.tensor(value, dtype=torch.float, device=self.device)
+        train_x = torch.tensor(self.independent_cache, dtype=torch.double, device=self.device)
+        if train_x.dim() == 1:
+            train_x = train_x.view(-1, 1)
+        train_y = torch.tensor(value, dtype=torch.double, device=self.device)
         gp = SingleTaskGP(train_x, train_y).to(self.device)
         mll = ExactMarginalLogLikelihood(gp.likelihood, gp).to(self.device)
         fit_gpytorch_mll(mll)
