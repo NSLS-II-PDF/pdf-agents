@@ -15,11 +15,15 @@ class TimedAgent(KMeansMonarchSubject):
         super().__init__(self, *args, **kwargs)
 
     def subject_ask_condition(self):
-        if ttime.time() - self.last_time > 60 * 10:
+        if ttime.time() - self.last_time > 60 * 90:  # 1.5 hours
             self.last_time = ttime.time()
             return True
         else:
             return False
+
+    @property
+    def name(self):
+        return "TimedKMeansPDFMonarchBMMSubject"
 
 
 agent = TimedAgent(
@@ -55,7 +59,7 @@ def startup():
         for line in f:
             uids.append(line.strip().strip(",").strip("'"))
 
-    agent.tell_agent_by_uid(np.random.choice(uids, 50))
+    agent.tell_agent_by_uid(np.random.choice(uids, 30))
     agent.ask_on_tell = True
     agent.add_suggestions_to_queue(3)
     agent.add_suggestions_to_subject_queue(1)
