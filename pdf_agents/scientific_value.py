@@ -137,6 +137,10 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         )
         if batch_size == 1:
             acq_value = [acq_value]
+        if not hasattr(self.independent_cache[0], "shape"):
+            candidates = candidates.squeeze()
+            if batch_size == 1:
+                candidates = [candidates]
         docs = [
             dict(
                 candidate=candidate.detach().cpu().numpy(),
