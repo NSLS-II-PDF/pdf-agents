@@ -136,7 +136,7 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
             acq, bounds=self.bounds, q=batch_size, num_restarts=self.num_restarts, raw_samples=self.raw_samples
         )
         if batch_size == 1:
-            acq_value = [acq_value.detach().cpu().numpy()]
+            acq_value = [acq_value]
         docs = [
             dict(
                 candidate=candidate.detach().cpu().numpy(),
