@@ -107,7 +107,7 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         return scientific_value_function(X, Y, y_distance_function=self.observable_distance_function)
 
     def tell(self, x, y):
-        return PassiveKmeansAgent().tell(x, y)
+        return PassiveKmeansAgent.tell(x, y)
 
     def report(self):
         value = self._value_function(np.array(self.independent_cache), np.array(self.observable_cache))
@@ -137,6 +137,7 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
                 latest_data=self.tell_cache[-1],
                 cache_len=len(self.independent_cache),
                 latest_value=value.squeeze()[-1],
+                ucb_beta=self.ucb_beta,
             )
             for candidate, acq in zip(candidates, acq_value)
         ]
