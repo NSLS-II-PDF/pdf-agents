@@ -59,7 +59,7 @@ def startup():
         for line in f:
             uids.append(line.strip().strip(",").strip("'"))
 
-    agent.tell_agent_by_uid(np.random.choice(uids, 30))
+    agent.tell_agent_by_uid(np.random.choice(uids, 15, replace=False))
     agent.ask_on_tell = True
     agent.add_suggestions_to_queue(3)
     agent.add_suggestions_to_subject_queue(1)
