@@ -128,9 +128,9 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         mll = ExactMarginalLogLikelihood(gp.likelihood, gp).to(self.device)
         fit_gpytorch_mll(mll)
         acq = (
-            UpperConfidenceBound(gp, beta=self._beta).to(self.device)
+            UpperConfidenceBound(gp, beta=self.ucb_beta).to(self.device)
             if batch_size == 1
-            else qUpperConfidenceBound(gp, beta=self._beta).to(self.device)
+            else qUpperConfidenceBound(gp, beta=self.ucb_beta).to(self.device)
         )
         candidates, acq_value = optimize_acqf(
             acq, bounds=self.bounds, q=batch_size, num_restarts=self.num_restarts, raw_samples=self.raw_samples
