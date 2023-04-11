@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
     def __init__(self, k_clusters, *args, **kwargs):
         estimator = KMeans(k_clusters)
-        _default_kwargs = self.get_beamline_objects()
-        _default_kwargs.update(kwargs)
         super().__init__(*args, estimator=estimator, **kwargs)
 
     def clear_caches(self):
