@@ -23,4 +23,7 @@ def discretize(value: np.typing.ArrayLike, resolution: np.typing.ArrayLike):
 
 
 def make_hashable(x):
-    tuple(map(float, x))
+    try:
+        return tuple(map(float, x))
+    except TypeError:
+        return float(x)

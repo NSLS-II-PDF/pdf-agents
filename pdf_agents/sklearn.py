@@ -1,4 +1,5 @@
 import logging
+from typing import Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -128,7 +129,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def bounds(self):
         return self._bounds
 
-    @bounds.set
+    @bounds.setter
     def bounds(self, value: ArrayLike):
         self._bounds = value
 
@@ -139,7 +140,9 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def tell(self, x, y):
         """A tell that adds to the local discrete knowledge cache, as well as the standard caches"""
         self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
-        return super().tell(x, y)
+        doc = super().tell(x, y)
+        doc["background"] = self.background
+        return doc
 
     def _sample_uncertainty_proxy(self, batch_size=1):
         """Some Dan Olds magic to cast the distance from a cluster as an uncertainty. Then sample there
@@ -165,7 +168,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         # calculate distances of all measurements from the centers
         distances = self.model.transform(sorted_observables)
         # determine golf-score of each point (minimum value)
-        min_landscape = distances.min(axis=0)
+        min_landscape = distances.min(axis=1)
         # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
         _x = np.arange(*self.bounds, self.motor_resolution)
         uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
@@ -175,6 +178,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
     def ask(self, batch_size=1):
         suggestions, centers = self._sample_uncertainty_proxy(batch_size)
         kept_suggestions = []
+        if not isinstance(suggestions, Iterable):
+            suggestions = [suggestions]
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
             if suggestion in self.knowledge_cache:
@@ -186,7 +191,11 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
 
         base_doc = dict(
             cluster_centers=centers,
-            cache_len=self.independent_cache.shape[0],
+            cache_len=(
+                len(self.independent_cache)
+                if isinstance(self.independent_cache, list)
+                else self.independent_cache.shape[0]
+            ),
             latest_data=self.tell_cache[-1],
             requested_batch_size=batch_size,
             redundant_points_discarded=batch_size - len(kept_suggestions),

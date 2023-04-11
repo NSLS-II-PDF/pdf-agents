@@ -11,7 +11,7 @@ import tiled
 from bluesky_adaptive.agents.base import Agent, AgentConsumer
 from bluesky_adaptive.agents.simple import SequentialAgentBase
 from bluesky_kafka import Publisher
-from bluesky_queueserver_api.zmq import REManagerAPI
+from bluesky_queueserver_api.http import REManagerAPI
 from numpy.typing import ArrayLike
 
 from .utils import OfflineKafka
@@ -51,16 +51,23 @@ class PDFBaseAgent(Agent, ABC):
         else:
             _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
-        super().__init__(*args, **_default_kwargs)
+        md = dict(
+            motor_name=self.motor_name,
+            motor_resolution=self.motor_resolution,
+            data_key=self.data_key,
+            roi_key=self.roi_key,
+            roi=self.roi,
+        )
+        super().__init__(*args, metadata=md, **_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:
-        """Default measurement plan is an agent modified simple count  of pe1c, for a 30 sec exposure.
-        agent_sample_count(motor, position: float, exposure: float, *, sample_number: int, md=None):
+        """Default measurement plan is an agent modified simple count  of pe1c,
+        that uses redis to fill in key values like exposure time and sample number.
 
         Parameters
         ----------
         point : ArrayLike
-            Next point to measure using a given plan
+            Next point to measure using a given plan, given in absolute coordinates.
 
         Returns
         -------
@@ -70,11 +77,7 @@ class PDFBaseAgent(Agent, ABC):
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        return (
-            "agent_sample_count",
-            [self.motor_name, point, self.exposure_time],
-            dict(sample_number=self.sample_number),
-        )
+        return "agent_redisAware_XRDcount", [point], {}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
@@ -84,7 +87,11 @@ class PDFBaseAgent(Agent, ABC):
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
-        return run.start[self.motor_name][self.motor_name]["value"], y
+        try:
+            x = run.start["more_info"][self.motor_name][self.motor_name]["value"]
+        except KeyError:
+            x = run.start[self.motor_name][self.motor_name]["value"]
+        return x, y
 
     def server_registrations(self) -> None:
         self._register_property("motor_resolution")
@@ -115,39 +122,39 @@ class PDFBaseAgent(Agent, ABC):
     def motor_resolution(self, value: float):
         self._motor_resolution = value
 
-    @property
-    def exposure_time(self):
-        """Exposure time of scans in seconds"""
-        value = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
-        if value != self._exposure:
-            logger.warning(
-                f"Mismatch between agent exposure time ({self._exposure}) and redis value {value}. "
-                "Updating to redis value."
-            )
-            self._exposure = value
-        return self._exposure
+    # @property
+    # def exposure_time(self):
+    #     """Exposure time of scans in seconds"""
+    #     value = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
+    #     if value != self._exposure:
+    #         logger.warning(
+    #             f"Mismatch between agent exposure time ({self._exposure}) and redis value {value}. "
+    #             "Updating to redis value."
+    #         )
+    #         self._exposure = value
+    #     return self._exposure
 
-    @exposure_time.setter
-    def exposure_time(self, value: float):
-        self._exposure = value
-        self._rkvs.set("PDF:desired_exposure_time", value)
+    # @exposure_time.setter
+    # def exposure_time(self, value: float):
+    #     self._exposure = value
+    #     self._rkvs.set("PDF:desired_exposure_time", value)
 
-    @property
-    def sample_number(self):
-        """XPDAQ Sample Number"""
-        value = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
-        if value != self._sample_number:
-            logger.warning(
-                f"Mismatch between agent sample_number ({self._sample_number}) and redis value {value}. "
-                "Updating to redis value."
-            )
-            self._sample_number = value
-        return self._sample_number
+    # @property
+    # def sample_number(self):
+    #     """XPDAQ Sample Number"""
+    #     value = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
+    #     if value != self._sample_number:
+    #         logger.warning(
+    #             f"Mismatch between agent sample_number ({self._sample_number}) and redis value {value}. "
+    #             "Updating to redis value."
+    #         )
+    #         self._sample_number = value
+    #     return self._sample_number
 
-    @sample_number.setter
-    def sample_number(self, value: int):
-        self._sample_number = value
-        self._rkvs.set("PDF:xpdacq:sample_number", value)
+    # @sample_number.setter
+    # def sample_number(self, value: int):
+    #     self._sample_number = value
+    #     self._rkvs.set("PDF:xpdacq:sample_number", value)
 
     @property
     def background(self):
@@ -159,13 +166,13 @@ class PDFBaseAgent(Agent, ABC):
         )
         return self._background
 
-    @background.setter
-    def background(self, arr):
-        self._rkvs.set("PDF:bgd:x", str(list(arr[0, :])))
-        self._rkvs.set("PDF:bgd:y", str(list(arr[1, :])))
-        self._background = np.array(arr)
-        if self._background.shape[0] != 2:
-            raise ValueError("Background array should have shape [2, N]")
+    # @background.setter
+    # def background(self, arr):
+    #     self._rkvs.set("PDF:bgd:x", str(list(arr[0, :])))
+    #     self._rkvs.set("PDF:bgd:y", str(list(arr[1, :])))
+    #     self._background = np.array(arr)
+    #     if self._background.shape[0] != 2:
+    #         raise ValueError("Background array should have shape [2, N]")
 
     @property
     def data_key(self):
@@ -187,7 +194,7 @@ class PDFBaseAgent(Agent, ABC):
 
     @property
     def roi(self):
-        return self._roi_key
+        return self._roi
 
     @roi.setter
     def roi(self, value: Tuple[float, float]):
@@ -201,20 +208,20 @@ class PDFBaseAgent(Agent, ABC):
             config_file_path="/etc/bluesky/kafka.yml"
         )
         qs = REManagerAPI(http_server_uri=f"https://qserver.nsls2.bnl.gov/{beamline_tla}")
-        qs.set_authorization_key(api_key=None)
+        qs.set_authorization_key(api_key="yyyyy")
 
         kafka_consumer = AgentConsumer(
             topics=[
                 f"{beamline_tla}.bluesky.pdfstream.documents",
             ],
             consumer_config=kafka_config["runengine_producer_config"],
-            bootstrap_servers=kafka_config["bootstrap_servers"],
+            bootstrap_servers=",".join(kafka_config["bootstrap_servers"]),
             group_id=f"echo-{beamline_tla}-{str(uuid.uuid4())[:8]}",
         )
 
         kafka_producer = Publisher(
             topic=f"{beamline_tla}.bluesky.adjudicators",
-            bootstrap_servers=kafka_config["bootstrap_servers"],
+            bootstrap_servers=",".join(kafka_config["bootstrap_servers"]),
             key="{beamline_tla}.key",
             producer_config=kafka_config["runengine_producer_config"],
         )
@@ -222,8 +229,12 @@ class PDFBaseAgent(Agent, ABC):
         return dict(
             kafka_consumer=kafka_consumer,
             kafka_producer=kafka_producer,
-            tiled_data_node=tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox"),
-            tiled_agent_node=tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox"),
+            tiled_data_node=tiled.client.from_uri(
+                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+            ),
+            tiled_agent_node=tiled.client.from_uri(
+                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+            ),
             qserver=qs,
         )
 
@@ -245,6 +256,13 @@ class PDFBaseAgent(Agent, ABC):
             qserver=None,
         )
 
+    def trigger_condition(self, uid) -> bool:
+        try:
+            det_pos = self.exp_catalog[uid].start["more_info"]["Det_1_Z"]["Det_1_Z"]["value"]
+        except KeyError:
+            det_pos = self.exp_catalog[uid].start["Det_1_Z"]["Det_1_Z"]["value"]
+        return det_pos > 4_000.0
+
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
     def __init__(
@@ -255,3 +273,8 @@ class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
         **kwargs,
     ) -> None:
         super().__init__(sequence=sequence, relative_bounds=relative_bounds, **kwargs)
+
+    def tell(self, x, y) -> Dict[str, ArrayLike]:
+        doc = super().tell(x, y)
+        doc["background"] = self.background
+        return doc
