@@ -1,0 +1,8 @@
+version: '3'
+services:
+  your-service:
+    image: kmeans_service:latest
+    ports:
+      - 60281:60610
+    volumes:
+      - /etc/bluesky:/etc/bluesky
