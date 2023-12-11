@@ -14,7 +14,7 @@ from bluesky_kafka import Publisher
 from bluesky_queueserver_api.http import REManagerAPI
 from numpy.typing import ArrayLike
 
-from .utils import OfflineKafka
+from .utils import OfflineKafka, OfflineRedis
 
 logger = getLogger(__name__)
 
@@ -31,13 +31,10 @@ class PDFBaseAgent(Agent, ABC):
         offline=False,
         **kwargs,
     ):
-        self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
-        self._motor_name = motor_name
-        self._motor_resolution = motor_resolution
-        self._data_key = data_key
-        self._roi_key = roi_key
-        self._roi = roi
-        # Attributes pulled in from Redis
+        if offline:
+            self._rkvs = OfflineRedis()
+        else:
+            self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
         self._background = np.array(
@@ -46,6 +43,14 @@ class PDFBaseAgent(Agent, ABC):
                 ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
             ]
         )
+
+        self._motor_name = motor_name
+        self._motor_resolution = motor_resolution
+        self._data_key = data_key
+        self._roi_key = roi_key
+        self._roi = roi
+        # Attributes pulled in from Redis
+
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
@@ -245,7 +250,7 @@ class PDFBaseAgent(Agent, ABC):
         offline_kafka = OfflineKafka()
         try:
             node = tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox")
-        except tiled.profile.ProfileNotFound:
+        except tiled.profiles.ProfileNotFound:
             node = None
 
         return dict(

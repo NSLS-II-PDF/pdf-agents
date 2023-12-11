@@ -1,4 +1,5 @@
 import numpy as np
+from pydantic import parse_obj_as
 
 
 class OfflineKafka:
@@ -16,6 +17,14 @@ class OfflineKafka:
 
     def stop(self, *args, **kwargs):
         pass
+
+
+class OfflineRedis:
+    def get(self, *args, **kwargs):
+        return b"0"
+
+    def set(self, *args, **kwargs):
+        return b"0"
 
 
 def discretize(value: np.typing.ArrayLike, resolution: np.typing.ArrayLike):
