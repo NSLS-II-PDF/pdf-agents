@@ -1,3 +1,5 @@
+import os
+
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 
 from pdf_agents.sklearn import PassiveKmeansAgent
@@ -14,7 +16,7 @@ class Agent(PassiveKmeansAgent):
 
     @property
     def name(self):
-        return "KmeansAgent"
+        return "KmeansAgentService"
 
     @property
     def running(self):
@@ -63,7 +65,9 @@ class Agent(PassiveKmeansAgent):
         return super().server_registrations()
 
 
-agent = Agent(k_clusters=3, report_on_tell=True, ask_on_tell=False, direct_to_queue=False)
+offline_mode = str(os.getenv("OFFLINE_MODE", "False")).lower() in ["true", "1", "yes"]
+print(offline_mode)
+agent = Agent(k_clusters=3, report_on_tell=True, ask_on_tell=False, direct_to_queue=False, offline=offline_mode)
 
 
 @startup_decorator

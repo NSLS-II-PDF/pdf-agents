@@ -1,2 +1,2 @@
-docker build -t kmeans_service:latest .
+docker build -t kmeans-service:pdf .
 docker-compose up

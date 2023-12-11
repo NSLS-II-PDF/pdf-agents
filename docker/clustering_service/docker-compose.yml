@@ -1,7 +1,7 @@
 version: '3'
 services:
-  your-service:
-    image: kmeans_service:latest
+  kmeans-service:
+    image: kmeans-service:pdf
     ports:
       - 60281:60610
     volumes:
