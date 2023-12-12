@@ -12,4 +12,4 @@ COPY kmeans_service.py /src/kmeans_service.py
 ENV BS_AGENT_STARTUP_SCRIPT_PATH=/src/kmeans_service.py
 ENV OFFLINE_MODE="TRUE"
 
-CMD uvicorn bluesky_adaptive.server:app --host 127.0.0.1 --port 60610
+CMD uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --port 60610

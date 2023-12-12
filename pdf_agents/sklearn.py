@@ -3,10 +3,13 @@ from typing import Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
+import plotly.graph_objects as go
 from bluesky_adaptive.agents.sklearn import ClusterAgentBase
 from databroker.client import BlueskyRun
 from numpy.polynomial.polynomial import polyfit, polyval
 from numpy.typing import ArrayLike
+from plotly import express as px
+from plotly.subplots import make_subplots
 from scipy.stats import rv_discrete
 from sklearn.cluster import KMeans
 
@@ -42,6 +45,7 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
         scaler: float = 1000.0,
         offset: float = 1.0,
         reorder_labels: bool = True,
+        plotly: bool = False,
     ):
         """Creates waterfall plot of spectra from a previously generated agent report.
         Waterfall plot of spectra will use 'scaler' to rescale each spectra prior to plotting.
@@ -59,6 +63,8 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
             Offset of plots to be tuned with scaler for waterfal, by default 1.0
         reorder_labels : bool, optional
             Optionally reorder the labelling so the first label appears first in the list, by default True
+        plotly : bool, optional
+            Optionally use plotly for plotting, by default False
 
         Returns
         -------
@@ -75,24 +81,69 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
         if reorder_labels:
             labels = cls.ordered_relabeling(labels)
 
-        fig = plt.figure(dpi=100)
-        ax = fig.add_subplot(2, 1, 1)
-        for i in range(len(labels)):
-            ax.scatter(independent_vars[i], labels[i], color=f"C{labels[i]}")
-        ax.set_xlabel("measurement axis")
-        ax.set_ylabel("K-means label")
+        if plotly:
+            colors = px.colors.qualitative.Plotly
 
-        ax = fig.add_subplot(2, 1, 2)
-        for i in range(len(observables)):
-            plt.plot(
-                np.arange(observables.shape[1]),
-                scaler * observables[i] + i * offset,
-                color=f"C{labels[i]}",
-                alpha=0.1,
+            fig = go.Figure()
+            fig = make_subplots(rows=2, cols=1)
+            # Scatter plot for K-means labels
+            for i in range(len(labels)):
+                fig.add_trace(
+                    go.Scatter(
+                        x=np.array(independent_vars[i]),
+                        y=np.array(labels[i]),
+                        mode="markers",
+                        marker=dict(color=colors[labels[i]]),
+                        name=f"Label {labels[i]}",
+                    ),
+                    row=1,
+                    col=1,
+                )
+
+            # Line plot for intensity
+            for i in range(len(observables)):
+                fig.add_trace(
+                    go.Scatter(
+                        x=np.arange(observables.shape[1]),
+                        y=1000 * observables[i] + i * 1.0,
+                        mode="lines",
+                        line=dict(color=colors[labels[i]]),
+                        name=f"Intensity {i}",
+                    ),
+                    row=2,
+                    col=1,
+                )
+
+            # Layout adjustments
+            fig.update_layout(
+                xaxis_title="Measurement Axis",
+                yaxis_title="K-means Label",
+                xaxis2_title="Dataset Index",
+                yaxis2_title="Intensity",
+                height=600,
+                width=800,
+                title="Waterfall Plot",
+                showlegend=False,
             )
-        ax.set_xlabel("Dataset index")
-        ax.set_ylabel("Intensity")
-        fig.tight_layout()
+        else:
+            fig = plt.figure(dpi=100)
+            ax = fig.add_subplot(2, 1, 1)
+            for i in range(len(labels)):
+                ax.scatter(independent_vars[i], labels[i], color=f"C{labels[i]}")
+            ax.set_xlabel("measurement axis")
+            ax.set_ylabel("K-means label")
+
+            ax = fig.add_subplot(2, 1, 2)
+            for i in range(len(observables)):
+                plt.plot(
+                    np.arange(observables.shape[1]),
+                    scaler * observables[i] + i * offset,
+                    color=f"C{labels[i]}",
+                    alpha=0.1,
+                )
+            ax.set_xlabel("Dataset index")
+            ax.set_ylabel("Intensity")
+            fig.tight_layout()
 
         return fig
 

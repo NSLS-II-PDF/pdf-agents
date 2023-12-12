@@ -22,6 +22,9 @@ class Agent(PassiveKmeansAgent):
     def running(self):
         return self._running
 
+    def agent_uid(self):
+        return self._compose_run_bundle.start_doc["uid"]
+
     def activate(self):
         self._running = True
 
@@ -57,6 +60,7 @@ class Agent(PassiveKmeansAgent):
     def server_registrations(self) -> None:
         self._register_method("close_and_restart")
         self._register_property("running")
+        self._register_property("agent_uid")
         self._register_method("activate")
         self._register_method("pause")
         self._register_method("exp_start_clean_run")
@@ -72,12 +76,16 @@ agent = Agent(k_clusters=3, report_on_tell=True, ask_on_tell=False, direct_to_qu
 
 @startup_decorator
 def startup():
-    agent.start()
+    if not offline_mode:
+        agent.start()
 
 
 @shutdown_decorator
 def shutdown_agent():
-    return agent.stop()
+    if offline_mode:
+        return
+    else:
+        return agent.stop()
 
 
 register_variable("UID Cache", agent, "tell_cache")
