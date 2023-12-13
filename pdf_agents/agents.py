@@ -98,7 +98,7 @@ class PDFBaseAgent(Agent, ABC):
         try:
             x = np.array(
                 [
-                    run.start["more_info"][motor_name][f"OT_Stage_2_{motor_name[0].upper()}"]["value"]
+                    run.start["more_info"][motor_name][f"OT_stage_2_{motor_name[0].upper()}"]["value"]
                     for motor_name in self.motor_names
                 ]
             )
