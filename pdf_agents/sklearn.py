@@ -37,6 +37,13 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
         self._register_method("clear_caches")
         return super().server_registrations()
 
+    def tell(self, x, y):
+        """Update tell using relative info"""
+        x = x - self._motor_origins
+        doc = super().tell(x, y)
+        doc["absolute_position_offset"] = self._motor_origins
+        return doc
+
     @classmethod
     def hud_from_report(
         cls,
@@ -215,10 +222,16 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             latest_data=self.tell_cache[-1],
             requested_batch_size=batch_size,
             redundant_points_discarded=batch_size - len(kept_suggestions),
+            absolute_position_offset=self._motor_origins,
         )
         docs = [dict(suggestion=suggestion, **base_doc) for suggestion in kept_suggestions]
 
         return docs, kept_suggestions
+
+    def measurement_plan(self, relative_point: ArrayLike):
+        """Send measurement plan absolute point from reltive position"""
+        absolute_point = relative_point + self._motor_origins
+        return super().measurement_plan(absolute_point)
 
 
 def current_dist_gen(x, px):

@@ -236,22 +236,3 @@ class KMeansMonarchSubject(MonarchSubjectAgent, ActiveKmeansAgent):
         )
         docs = [dict(suggestion=suggestion, **_default_doc) for suggestion in kept_suggestions]
         return docs, kept_suggestions
-
-    def tell(self, x, y):
-        """Update tell using relative info"""
-        x = x - self.pdf_origin[0]
-        doc = super().tell(x, y)
-        doc["absolute_position_offset"] = self.pdf_origin[0]
-        return doc
-
-    def ask(self, batch_size=1) -> Tuple[Sequence[dict[str, ArrayLike]], Sequence[ArrayLike]]:
-        """Update ask with relative info"""
-        docs, suggestions = super().ask(batch_size=batch_size)
-        for doc in docs:
-            doc["absolute_position_offset"] = self.pdf_origin[0]
-        return docs, suggestions
-
-    def measurement_plan(self, relative_point: ArrayLike) -> Tuple[str, List, dict]:
-        """Send measurement plan absolute point from reltive position"""
-        absolute_point = relative_point + self.pdf_origin[0]
-        return super().measurement_plan(absolute_point)

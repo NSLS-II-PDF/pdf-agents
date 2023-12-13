@@ -23,7 +23,8 @@ class PDFBaseAgent(Agent, ABC):
     def __init__(
         self,
         *args,
-        motor_names: List[str] = ["Grid_X"],
+        motor_names: List[str] = ["xstage", "ystage"],
+        motor_origins: List[Tuple[float, float]] = [(0.0, 0.0), (0.0, 0.0)],
         motor_resolution: float = 0.0002,
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
@@ -34,6 +35,7 @@ class PDFBaseAgent(Agent, ABC):
         self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
         self._motor_names = motor_names
         self._motor_resolution = motor_resolution
+        self._motor_origins = np.array(motor_origins)
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
@@ -84,6 +86,7 @@ class PDFBaseAgent(Agent, ABC):
         return "agent_redisAware_XRDcount", [point], {}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
+        """Subtracts background and returns motor positions and data"""
         y = run.primary.data[self.data_key].read().flatten()
         if self.background is not None:
             y = y - self.background[1]
@@ -94,7 +97,10 @@ class PDFBaseAgent(Agent, ABC):
             y = y[idx_min:idx_max]
         try:
             x = np.array(
-                [run.start["more_info"][motor_name][motor_name]["value"] for motor_name in self.motor_names]
+                [
+                    run.start["more_info"][motor_name][f"OT_Stage_2_{motor_name[0].upper()}"]["value"]
+                    for motor_name in self.motor_names
+                ]
             )
         except KeyError:
             x = np.array([run.start[motor_name][motor_name]["value"] for motor_name in self.motor_names])
