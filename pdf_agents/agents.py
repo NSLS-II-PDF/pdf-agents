@@ -40,12 +40,16 @@ class PDFBaseAgent(Agent, ABC):
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
-        self._background = np.array(
-            [
-                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
-                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
-            ]
-        )
+        try:
+            self._background = np.array(
+                [
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+                ]
+            )
+        except AttributeError:
+            # None available in redis
+            self._background = None
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
@@ -81,7 +85,8 @@ class PDFBaseAgent(Agent, ABC):
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         y = run.primary.data[self.data_key].read().flatten()
-        y = y - self.background[1]
+        if self.background is not None:
+            y = y - self.background[1]
         if self.roi is not None:
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
@@ -160,12 +165,15 @@ class PDFBaseAgent(Agent, ABC):
 
     @property
     def background(self):
-        self._background = np.array(
-            [
-                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
-                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
-            ]
-        )
+        try:
+            self._background = np.array(
+                [
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+                ]
+            )
+        except AttributeError:
+            self._background = None
         return self._background
 
     # @background.setter
