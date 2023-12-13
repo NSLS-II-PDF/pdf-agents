@@ -273,11 +273,7 @@ class PDFBaseAgent(Agent, ABC):
         )
 
     def trigger_condition(self, uid) -> bool:
-        try:
-            det_pos = self.exp_catalog[uid].start["more_info"]["Det_1_Z"]["Det_1_Z"]["value"]
-        except KeyError:
-            det_pos = self.exp_catalog[uid].start["Det_1_Z"]["Det_1_Z"]["value"]
-        return det_pos > 4_000.0
+        return True
 
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):

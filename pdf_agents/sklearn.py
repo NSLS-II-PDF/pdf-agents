@@ -205,6 +205,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             return grid[top_indicies], centers
 
     def ask(self, batch_size=1):
+        """Get's a relative position from the agent. Returns a document and hashes the suggestion for redundancy"""
         suggestions, centers = self._sample_uncertainty_proxy(batch_size)
         kept_suggestions = []
         if not isinstance(suggestions, Iterable):
