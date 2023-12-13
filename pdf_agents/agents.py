@@ -232,10 +232,10 @@ class PDFBaseAgent(Agent, ABC):
             kafka_consumer=kafka_consumer,
             kafka_producer=kafka_producer,
             tiled_data_node=tiled.client.from_uri(
-                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+                "https://tiled.nsls2.bnl.gov/api/v1/metadata/pdf/bluesky_sandbox"
             ),
             tiled_agent_node=tiled.client.from_uri(
-                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+                "https://tiled.nsls2.bnl.gov/api/v1/metadata/pdf/bluesky_sandbox"
             ),
             qserver=qs,
         )
