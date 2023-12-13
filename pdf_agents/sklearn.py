@@ -171,7 +171,16 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         """
         # Borrowing from Dan's jupyter fun
         # from measurements, perform k-means
-        sorted_independents, sorted_observables = zip(*sorted(zip(self.independent_cache, self.observable_cache)))
+        try:
+            sorted_independents, sorted_observables = zip(
+                *sorted(zip(self.independent_cache, self.observable_cache))
+            )
+        except ValueError:
+            # Multidimensional case
+            sorted_independents, sorted_observables = zip(
+                *sorted(zip(self.independent_cache, self.observable_cache), key=lambda x: (x[0][0], x[0][1]))
+            )
+
         sorted_independents = np.array(sorted_independents)
         sorted_observables = np.array(sorted_observables)
         self.model.fit(sorted_observables)
