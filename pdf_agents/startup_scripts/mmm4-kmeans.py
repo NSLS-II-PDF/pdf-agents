@@ -8,7 +8,7 @@ agent = ActiveKmeansAgent(
     ask_on_tell=False,
     report_on_tell=True,
     k_clusters=4,
-    motor_names=["Grid_X", "Grid_Y"],
+    motor_names=["xstage", "ystage"],
 )
 
 
