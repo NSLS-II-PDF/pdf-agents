@@ -199,7 +199,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             return pick_from_distribution(_x, uwx, num_picks=batch_size), centers
         else:
             # assume a 2d scan, use a linear model to predict the uncertainty
-            grid = make_wafer_grid_list(*self.bounds, step=self.motor_resolution)
+            grid = make_wafer_grid_list(*self.bounds.ravel(), step=self.motor_resolution)
             uncertainty_preds = LinearRegression().fit(sorted_independents, min_landscape).predict(grid)
             top_indicies = np.argsort(uncertainty_preds)[-batch_size:]
             return grid[top_indicies], centers
