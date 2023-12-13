@@ -24,7 +24,7 @@ class PDFBaseAgent(Agent, ABC):
         self,
         *args,
         motor_names: List[str] = ["xstage", "ystage"],
-        motor_origins: List[Tuple[float, float]] = [(0.0, 0.0), (0.0, 0.0)],
+        motor_origins: List[float] = [0.0, 0.0],
         motor_resolution: float = 0.0002,
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
