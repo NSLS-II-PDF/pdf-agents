@@ -211,7 +211,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             suggestions = [suggestions]
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
-            hashable_suggestion = make_hashable(discretize(suggestion, self.min_step_size))
+            hashable_suggestion = make_hashable(discretize(suggestion, self.motor_resolution))
             if hashable_suggestion in self.knowledge_cache:
                 logger.info(
                     f"Suggestion {suggestion} is ignored as already in the knowledge cache: {hashable_suggestion}"
