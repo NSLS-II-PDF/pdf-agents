@@ -1,4 +1,5 @@
 import numpy as np
+import tiled.client.node
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 
 from pdf_agents.sklearn import ActiveKmeansAgent
