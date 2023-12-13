@@ -23,7 +23,7 @@ class PDFBaseAgent(Agent, ABC):
     def __init__(
         self,
         *args,
-        motor_name: str = "Grid_X",
+        motor_names: List[str] = ["Grid_X"],
         motor_resolution: float = 0.0002,
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
@@ -32,7 +32,7 @@ class PDFBaseAgent(Agent, ABC):
         **kwargs,
     ):
         self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
-        self._motor_name = motor_name
+        self._motor_names = motor_names
         self._motor_resolution = motor_resolution
         self._data_key = data_key
         self._roi_key = roi_key
@@ -52,7 +52,7 @@ class PDFBaseAgent(Agent, ABC):
             _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
         md = dict(
-            motor_name=self.motor_name,
+            motor_names=self.motor_names,
             motor_resolution=self.motor_resolution,
             data_key=self.data_key,
             roi_key=self.roi_key,
@@ -88,14 +88,16 @@ class PDFBaseAgent(Agent, ABC):
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
         try:
-            x = run.start["more_info"][self.motor_name][self.motor_name]["value"]
+            x = np.array(
+                [run.start["more_info"][motor_name][motor_name]["value"] for motor_name in self.motor_names]
+            )
         except KeyError:
-            x = run.start[self.motor_name][self.motor_name]["value"]
+            x = np.array([run.start[motor_name][motor_name]["value"] for motor_name in self.motor_names])
         return x, y
 
     def server_registrations(self) -> None:
         self._register_property("motor_resolution")
-        self._register_property("motor_name")
+        self._register_property("motor_names")
         self._register_property("exposure_time")
         self._register_property("sample_number")
         self._register_property("data_key")
@@ -105,13 +107,13 @@ class PDFBaseAgent(Agent, ABC):
         return super().server_registrations()
 
     @property
-    def motor_name(self):
+    def motor_names(self):
         """Name of motor to be used as the independent variable in the experiment"""
-        return self._motor_name
+        return self._motor_names
 
-    @motor_name.setter
-    def motor_name(self, value: str):
-        self._motor_name = value
+    @motor_names.setter
+    def motor_names(self, value: str):
+        self._motor_names = value
 
     @property
     def motor_resolution(self):
