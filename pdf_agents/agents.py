@@ -51,7 +51,7 @@ class PDFBaseAgent(Agent, ABC):
             )
         except AttributeError:
             # None available in redis
-            self._background = None
+            self._background = 0.0
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
@@ -179,7 +179,7 @@ class PDFBaseAgent(Agent, ABC):
                 ]
             )
         except AttributeError:
-            self._background = None
+            self._background = 0.0
         return self._background
 
     # @background.setter
