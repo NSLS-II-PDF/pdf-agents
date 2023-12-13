@@ -44,6 +44,15 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
         doc["absolute_position_offset"] = self._motor_origins
         return doc
 
+    def report(self, **kwargs):
+        arr = np.array(self.observable_cache)
+        self.model.fit(arr)
+        return dict(
+            cluster_centers=self.model.cluster_centers_,
+            cache_len=len(self.independent_cache),
+            latest_data=self.tell_cache[-1],
+        )
+
     @classmethod
     def hud_from_report(
         cls,
@@ -151,8 +160,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
 
     def tell(self, x, y):
         """A tell that adds to the local discrete knowledge cache, as well as the standard caches"""
-        self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
         doc = super().tell(x, y)
+        self.knowledge_cache.add(make_hashable(discretize(doc["independent_variable"], self.motor_resolution)))
         doc["background"] = self.background
         return doc
 
