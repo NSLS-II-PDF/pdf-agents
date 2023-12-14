@@ -83,7 +83,7 @@ class PDFBaseAgent(Agent, ABC):
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        return "agent_redisAware_XRDcount", [point], {}
+        return "agent_move_and_measure_hanukkah23", [], {"x": point[0], "y": point[1], "exposure": 5}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
         """Subtracts background and returns motor positions and data"""
