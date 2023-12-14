@@ -12,6 +12,7 @@ agent = ActiveKmeansAgent(
     report_on_tell=True,
     k_clusters=4,
     motor_names=["xstage", "ystage"],
+    motor_origins=[-154.7682, 48.9615],
     qserver=qserver,
 )
 
