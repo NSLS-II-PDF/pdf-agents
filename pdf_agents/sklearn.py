@@ -9,7 +9,7 @@ from numpy.polynomial.polynomial import polyfit, polyval
 from numpy.typing import ArrayLike
 from scipy.stats import rv_discrete
 from sklearn.cluster import KMeans
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 
 from .agents import PDFBaseAgent
 from .utils import discretize, make_hashable, make_wafer_grid_list
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
     def __init__(self, k_clusters, *args, **kwargs):
-        estimator = KMeans(k_clusters)
+        estimator = KMeans(k_clusters, n_init="auto")
         _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
         super().__init__(*args, estimator=estimator, **kwargs)
@@ -195,11 +195,13 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         self.model.fit(sorted_observables)
         # retreive centers
         centers = self.model.cluster_centers_
-        # calculate distances of all measurements from the centers
-        distances = self.model.transform(sorted_observables)
-        # determine golf-score of each point (minimum value)
-        min_landscape = distances.min(axis=1)
+
         if self.bounds.size == 2:
+            # One dimensional case, Use the Dan Olds approach
+            # calculate distances of all measurements from the centers
+            distances = self.model.transform(sorted_observables)
+            # determine golf-score of each point (minimum value)
+            min_landscape = distances.min(axis=1)
             # Assume a 1d scan
             # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
             _x = np.arange(*self.bounds, self.motor_resolution)
@@ -209,8 +211,10 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         else:
             # assume a 2d scan, use a linear model to predict the uncertainty
             grid = make_wafer_grid_list(*self.bounds.ravel(), step=self.motor_resolution)
-            uncertainty_preds = LinearRegression().fit(sorted_independents, min_landscape).predict(grid)
-            top_indicies = np.argsort(uncertainty_preds)[-batch_size:]
+            labels = self.model.predict(sorted_independents)
+            proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
+            shannon = -np.sum(proby_preds * np.log(1 / proby_preds), axis=-1)
+            top_indicies = np.argsort(shannon)[-batch_size:]
             return grid[top_indicies], centers
 
     def ask(self, batch_size=1):
@@ -223,7 +227,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         for suggestion in suggestions:
             hashable_suggestion = make_hashable(discretize(suggestion, self.motor_resolution))
             if hashable_suggestion in self.knowledge_cache:
-                logger.info(
+                logger.warn(
                     f"Suggestion {suggestion} is ignored as already in the knowledge cache: {hashable_suggestion}"
                 )
                 continue
