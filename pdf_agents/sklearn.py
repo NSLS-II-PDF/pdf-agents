@@ -205,6 +205,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             # Assume a 1d scan
             # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
             _x = np.arange(*self.bounds, self.motor_resolution)
+            if batch_size is None:
+                batch_size = len(_x)
             uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
             # Chose from the polynomial fit
             return pick_from_distribution(_x, uwx, num_picks=batch_size), centers
@@ -214,12 +216,12 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             labels = self.model.predict(sorted_observables)
             proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
             shannon = -np.sum(proby_preds * np.log(1 / proby_preds), axis=-1)
-            top_indicies = np.argsort(shannon)[-batch_size:]
+            top_indicies = np.argsort(shannon) if batch_size is None else np.argsort(shannon)[-batch_size:]
             return grid[top_indicies], centers
 
     def ask(self, batch_size=1):
         """Get's a relative position from the agent. Returns a document and hashes the suggestion for redundancy"""
-        suggestions, centers = self._sample_uncertainty_proxy(batch_size)
+        suggestions, centers = self._sample_uncertainty_proxy(None)
         kept_suggestions = []
         if not isinstance(suggestions, Iterable):
             suggestions = [suggestions]
@@ -234,6 +236,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             else:
                 self.knowledge_cache.add(hashable_suggestion)
                 kept_suggestions.append(suggestion)
+            if len(kept_suggestions) >= batch_size:
+                break
 
         base_doc = dict(
             cluster_centers=centers,
