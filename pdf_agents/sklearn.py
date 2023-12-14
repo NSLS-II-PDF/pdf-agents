@@ -211,7 +211,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         else:
             # assume a 2d scan, use a linear model to predict the uncertainty
             grid = make_wafer_grid_list(*self.bounds.ravel(), step=self.motor_resolution)
-            labels = self.model.predict(sorted_independents)
+            labels = self.model.predict(sorted_observables)
             proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
             shannon = -np.sum(proby_preds * np.log(1 / proby_preds), axis=-1)
             top_indicies = np.argsort(shannon)[-batch_size:]
