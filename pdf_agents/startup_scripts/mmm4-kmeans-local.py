@@ -1,5 +1,5 @@
 import numpy as np
-import tiled.client.node
+import tiled.client.node  # noqa: F401
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 from bluesky_queueserver_api.zmq import REManagerAPI
 
