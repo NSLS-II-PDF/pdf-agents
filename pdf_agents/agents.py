@@ -23,8 +23,9 @@ class PDFBaseAgent(Agent, ABC):
     def __init__(
         self,
         *args,
-        motor_name: str = "Grid_X",
-        motor_resolution: float = 0.0002,
+        motor_names: List[str] = ["xstage", "ystage"],
+        motor_origins: List[float] = [0.0, 0.0],
+        motor_resolution: float = 0.2,  # mm
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
         roi: Optional[Tuple] = None,
@@ -32,27 +33,32 @@ class PDFBaseAgent(Agent, ABC):
         **kwargs,
     ):
         self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
-        self._motor_name = motor_name
+        self._motor_names = motor_names
         self._motor_resolution = motor_resolution
+        self._motor_origins = np.array(motor_origins)
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
-        self._background = np.array(
-            [
-                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
-                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
-            ]
-        )
+        try:
+            self._background = np.array(
+                [
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+                ]
+            )
+        except AttributeError:
+            # None available in redis
+            self._background = np.zeros((2,))
         if offline:
             _default_kwargs = self.get_offline_objects()
         else:
             _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
         md = dict(
-            motor_name=self.motor_name,
+            motor_names=self.motor_names,
             motor_resolution=self.motor_resolution,
             data_key=self.data_key,
             roi_key=self.roi_key,
@@ -77,25 +83,32 @@ class PDFBaseAgent(Agent, ABC):
         plan_kwargs : dict
             Dictionary of keyword arguments to pass the plan, from a point to measure.
         """
-        return "agent_redisAware_XRDcount", [point], {}
+        return "agent_move_and_measure_hanukkah23", [], {"x": point[0], "y": point[1], "exposure": 5}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
+        """Subtracts background and returns motor positions and data"""
         y = run.primary.data[self.data_key].read().flatten()
-        y = y - self.background[1]
+        if self.background is not None:
+            y = y - self.background[1]
         if self.roi is not None:
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
             y = y[idx_min:idx_max]
         try:
-            x = run.start["more_info"][self.motor_name][self.motor_name]["value"]
+            x = np.array(
+                [
+                    run.start["more_info"][motor_name][f"OT_stage_2_{motor_name[0].upper()}"]["value"]
+                    for motor_name in self.motor_names
+                ]
+            )
         except KeyError:
-            x = run.start[self.motor_name][self.motor_name]["value"]
+            x = np.array([run.start[motor_name][motor_name]["value"] for motor_name in self.motor_names])
         return x, y
 
     def server_registrations(self) -> None:
         self._register_property("motor_resolution")
-        self._register_property("motor_name")
+        self._register_property("motor_names")
         self._register_property("exposure_time")
         self._register_property("sample_number")
         self._register_property("data_key")
@@ -105,13 +118,13 @@ class PDFBaseAgent(Agent, ABC):
         return super().server_registrations()
 
     @property
-    def motor_name(self):
+    def motor_names(self):
         """Name of motor to be used as the independent variable in the experiment"""
-        return self._motor_name
+        return self._motor_names
 
-    @motor_name.setter
-    def motor_name(self, value: str):
-        self._motor_name = value
+    @motor_names.setter
+    def motor_names(self, value: str):
+        self._motor_names = value
 
     @property
     def motor_resolution(self):
@@ -158,12 +171,15 @@ class PDFBaseAgent(Agent, ABC):
 
     @property
     def background(self):
-        self._background = np.array(
-            [
-                ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
-                ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
-            ]
-        )
+        try:
+            self._background = np.array(
+                [
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:x").decode("utf-8")),
+                    ast.literal_eval(self._rkvs.get("PDF:bgd:y").decode("utf-8")),
+                ]
+            )
+        except AttributeError:
+            self._background = np.zeros((2,))
         return self._background
 
     # @background.setter
@@ -230,10 +246,10 @@ class PDFBaseAgent(Agent, ABC):
             kafka_consumer=kafka_consumer,
             kafka_producer=kafka_producer,
             tiled_data_node=tiled.client.from_uri(
-                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+                "https://tiled.nsls2.bnl.gov/api/v1/metadata/pdf/bluesky_sandbox"
             ),
             tiled_agent_node=tiled.client.from_uri(
-                "https://tiled.nsls2.bnl.gov/api/v1/node/metadata/pdf/bluesky_sandbox"
+                "https://tiled.nsls2.bnl.gov/api/v1/metadata/pdf/bluesky_sandbox"
             ),
             qserver=qs,
         )
@@ -257,11 +273,7 @@ class PDFBaseAgent(Agent, ABC):
         )
 
     def trigger_condition(self, uid) -> bool:
-        try:
-            det_pos = self.exp_catalog[uid].start["more_info"]["Det_1_Z"]["Det_1_Z"]["value"]
-        except KeyError:
-            det_pos = self.exp_catalog[uid].start["Det_1_Z"]["Det_1_Z"]["value"]
-        return det_pos > 4_000.0
+        return True
 
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):

@@ -9,16 +9,17 @@ from numpy.polynomial.polynomial import polyfit, polyval
 from numpy.typing import ArrayLike
 from scipy.stats import rv_discrete
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LogisticRegression
 
 from .agents import PDFBaseAgent
-from .utils import discretize, make_hashable
+from .utils import discretize, make_hashable, make_wafer_grid_list
 
 logger = logging.getLogger(__name__)
 
 
 class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
     def __init__(self, k_clusters, *args, **kwargs):
-        estimator = KMeans(k_clusters)
+        estimator = KMeans(k_clusters, n_init="auto")
         _default_kwargs = self.get_beamline_objects()
         _default_kwargs.update(kwargs)
         super().__init__(*args, estimator=estimator, **kwargs)
@@ -35,6 +36,22 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
     def server_registrations(self) -> None:
         self._register_method("clear_caches")
         return super().server_registrations()
+
+    def tell(self, x, y):
+        """Update tell using relative info"""
+        x = x - self._motor_origins
+        doc = super().tell(x, y)
+        doc["absolute_position_offset"] = self._motor_origins
+        return doc
+
+    def report(self, **kwargs):
+        arr = np.array(self.observable_cache)
+        self.model.fit(arr)
+        return dict(
+            cluster_centers=self.model.cluster_centers_,
+            cache_len=len(self.independent_cache),
+            latest_data=self.tell_cache[-1],
+        )
 
     @classmethod
     def hud_from_report(
@@ -126,6 +143,10 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         self.knowledge_cache = set()  # Discretized knowledge cache of previously asked/told points
 
     @property
+    def name(self):
+        return "PDFActiveKMeans"
+
+    @property
     def bounds(self):
         return self._bounds
 
@@ -139,8 +160,8 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
 
     def tell(self, x, y):
         """A tell that adds to the local discrete knowledge cache, as well as the standard caches"""
-        self.knowledge_cache.add(make_hashable(discretize(x, self.motor_resolution)))
         doc = super().tell(x, y)
+        self.knowledge_cache.add(make_hashable(discretize(doc["independent_variable"], self.motor_resolution)))
         doc["background"] = self.background
         return doc
 
@@ -159,35 +180,64 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
         """
         # Borrowing from Dan's jupyter fun
         # from measurements, perform k-means
-        sorted_independents, sorted_observables = zip(*sorted(zip(self.independent_cache, self.observable_cache)))
+        try:
+            sorted_independents, sorted_observables = zip(
+                *sorted(zip(self.independent_cache, self.observable_cache))
+            )
+        except ValueError:
+            # Multidimensional case
+            sorted_independents, sorted_observables = zip(
+                *sorted(zip(self.independent_cache, self.observable_cache), key=lambda x: (x[0][0], x[0][1]))
+            )
+
         sorted_independents = np.array(sorted_independents)
         sorted_observables = np.array(sorted_observables)
         self.model.fit(sorted_observables)
         # retreive centers
         centers = self.model.cluster_centers_
-        # calculate distances of all measurements from the centers
-        distances = self.model.transform(sorted_observables)
-        # determine golf-score of each point (minimum value)
-        min_landscape = distances.min(axis=1)
-        # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
-        _x = np.arange(*self.bounds, self.motor_resolution)
-        uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
-        # Chose from the polynomial fit
-        return pick_from_distribution(_x, uwx, num_picks=batch_size), centers
+
+        if self.bounds.size == 2:
+            # One dimensional case, Use the Dan Olds approach
+            # calculate distances of all measurements from the centers
+            distances = self.model.transform(sorted_observables)
+            # determine golf-score of each point (minimum value)
+            min_landscape = distances.min(axis=1)
+            # Assume a 1d scan
+            # generate 'uncertainty weights' - as a polynomial fit of the golf-score for each point
+            _x = np.arange(*self.bounds, self.motor_resolution)
+            if batch_size is None:
+                batch_size = len(_x)
+            uwx = polyval(_x, polyfit(sorted_independents, min_landscape, deg=5))
+            # Chose from the polynomial fit
+            return pick_from_distribution(_x, uwx, num_picks=batch_size), centers
+        else:
+            # assume a 2d scan, use a linear model to predict the uncertainty
+            grid = make_wafer_grid_list(*self.bounds.ravel(), step=self.motor_resolution)
+            labels = self.model.predict(sorted_observables)
+            proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
+            shannon = -np.sum(proby_preds * np.log(1 / proby_preds), axis=-1)
+            top_indicies = np.argsort(shannon) if batch_size is None else np.argsort(shannon)[-batch_size:]
+            return grid[top_indicies], centers
 
     def ask(self, batch_size=1):
-        suggestions, centers = self._sample_uncertainty_proxy(batch_size)
+        """Get's a relative position from the agent. Returns a document and hashes the suggestion for redundancy"""
+        suggestions, centers = self._sample_uncertainty_proxy(None)
         kept_suggestions = []
         if not isinstance(suggestions, Iterable):
             suggestions = [suggestions]
         # Keep non redundant suggestions and add to knowledge cache
         for suggestion in suggestions:
-            if suggestion in self.knowledge_cache:
-                logger.info(f"Suggestion {suggestion} is ignored as already in the knowledge cache")
+            hashable_suggestion = make_hashable(discretize(suggestion, self.motor_resolution))
+            if hashable_suggestion in self.knowledge_cache:
+                logger.warn(
+                    f"Suggestion {suggestion} is ignored as already in the knowledge cache: {hashable_suggestion}"
+                )
                 continue
             else:
-                self.knowledge_cache.add(make_hashable(discretize(suggestion, self.motor_resolution)))
+                self.knowledge_cache.add(hashable_suggestion)
                 kept_suggestions.append(suggestion)
+            if len(kept_suggestions) >= batch_size:
+                break
 
         base_doc = dict(
             cluster_centers=centers,
@@ -199,10 +249,16 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             latest_data=self.tell_cache[-1],
             requested_batch_size=batch_size,
             redundant_points_discarded=batch_size - len(kept_suggestions),
+            absolute_position_offset=self._motor_origins,
         )
         docs = [dict(suggestion=suggestion, **base_doc) for suggestion in kept_suggestions]
 
         return docs, kept_suggestions
+
+    def measurement_plan(self, relative_point: ArrayLike):
+        """Send measurement plan absolute point from reltive position"""
+        absolute_point = relative_point + self._motor_origins
+        return super().measurement_plan(absolute_point)
 
 
 def current_dist_gen(x, px):
