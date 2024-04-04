@@ -2,6 +2,7 @@ import ast
 import uuid
 from abc import ABC
 from logging import getLogger
+from turtle import back
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import nslsii.kafka_utils
@@ -29,6 +30,7 @@ class PDFBaseAgent(Agent, ABC):
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
         roi: Optional[Tuple] = None,
+        norm_region: Optional[Tuple] = None,
         offline=False,
         **kwargs,
     ):
@@ -39,6 +41,7 @@ class PDFBaseAgent(Agent, ABC):
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
+        self._norm_region = norm_region
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
@@ -90,6 +93,35 @@ class PDFBaseAgent(Agent, ABC):
         y = run.primary.data[self.data_key].read().flatten()
         if self.background is not None:
             y = y - self.background[1]
+
+        if self.norm_region is not None:
+            ordinate = np.array(run.primary.data[self.roi_key]).flatten()
+            idx_min = (
+                np.where(ordinate < self.norm_region[0])[0][-1]
+                if len(np.where(ordinate < self.norm_region[0])[0])
+                else None
+            )
+            idx_max = (
+                np.where(ordinate > self.norm_region[1])[0][-1]
+                if len(np.where(ordinate > self.norm_region[1])[0])
+                else None
+            )
+            bkg_idx_min = (
+                np.where(self.background[0] < self.norm_region[0])[0][-1]
+                if len(np.where(self.background[0] < self.norm_region[0])[0])
+                else None
+            )
+            bkg_idx_max = (
+                np.where(self.background[0] > self.norm_region[1])[0][-1]
+                if len(np.where(self.background[0] > self.norm_region[1])[0])
+                else None
+            )
+            scale_factor = np.sum(self.background[1][bkg_idx_min:bkg_idx_max]) / np.sum(y[idx_min:idx_max])
+        else:
+            scale_factor = 1
+
+        y = y * scale_factor
+
         if self.roi is not None:
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
@@ -115,6 +147,7 @@ class PDFBaseAgent(Agent, ABC):
         self._register_property("roi_key")
         self._register_property("roi")
         self._register_property("background")
+        self._register_property("norm_region")
         return super().server_registrations()
 
     @property
@@ -215,6 +248,15 @@ class PDFBaseAgent(Agent, ABC):
     @roi.setter
     def roi(self, value: Tuple[float, float]):
         self._roi = value
+        self.close_and_restart(clear_tell_cache=True)
+
+    @property
+    def norm_region(self):
+        return self._norm_region
+
+    @norm_region.setter
+    def norm_region(self, value: Tuple[float, float]):
+        self._norm_region = value
         self.close_and_restart(clear_tell_cache=True)
 
     @staticmethod
