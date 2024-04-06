@@ -1,0 +1,49 @@
+FROM fedora
+
+RUN dnf install -y wget \
+    bzip2 \
+    subversion \
+    libXxf86vm \
+    mesa-libGL \
+    mesa-libGLU
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
+
+RUN bash /tmp/miniconda.sh -b -p /opt/miniconda
+
+ENV PATH="/opt/miniconda/bin:$PATH"
+ENV g2home=/GSASII
+
+RUN conda create -n GSASII python=3.10 \
+    wxpython=4.2 \
+    numpy=1.23 \
+    scipy matplotlib \
+    pyopengl \
+    pillow \
+    h5py \
+    imageio \
+    conda \
+    subversion \
+    requests \
+    bluesky \
+    -c conda-forge -y
+
+RUN mkdir -p ${g2home}
+WORKDIR ${g2home}
+RUN svn export https://subversion.xray.aps.anl.gov/pyGSAS/install/bootstrap.py $g2home
+RUN conda run -n GSASII python bootstrap.py
+RUN conda init
+
+RUN conda run -n GSASII python -m pip install 'bluesky-adaptive[all]'
+RUN conda run -n GSASII python -m pip install nslsii
+
+RUN mkdir -p /src/pdf-agents
+COPY pdf_agents /src/pdf-agents/pdf_agents
+
+ENV PYTHONPATH=${g2home}/GSASII:/src/pdf-agents:$PYTHONPATH
+
+# Cleanup 
+RUN dnf clean all\
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /root/.cache/pip/* \
+    && rm -rf /tmp/*
+RUN conda run -n GSASII conda clean -y --all
