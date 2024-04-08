@@ -7,11 +7,41 @@ import GSASIIscriptable as G2sc  # TODO (maffettone): Sort out install into env 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from pdf_agents.agents import PDFBaseAgent, PDFReporterMixin
+
 logger = logging.getLogger(__name__)
 
 
-# class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
-class RefinementAgent:
+class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
+    """_summary_
+
+    Parameters
+    ----------
+    cif_paths : List[Union[str, Path]]
+        Cif paths for the refinements
+    refinement_params : List[dict]
+        Dictionaries of refinement parameters for each cif
+    inst_param_path : Union[str, Path]
+        Path to instrument parameters file
+
+    Attributes
+    ----------
+    cif_paths : List[Union[str, Path]]
+        Cif paths for the refinements
+    refinement_params : List[dict]
+        Dictionaries of refinement parameters for each cif
+    inst_param_path : Union[str, Path]
+        Path to instrument parameters file
+
+    Examples
+    --------
+    This agent is designed to be used in offline mode. It can be used as follows:
+    >>> import tiled.client.node # Workaround for API issue
+    >>> from pdf_agents.gsas import RefinementAgent
+    >>> offline_obj = RefinementAgent.get_offline_objects()
+    >>> agent = RefinementAgent(cif_paths = [], refinement_params = [], inst_param_path = "",
+                                report_producer=offline_obj["kafka_producer"], offline=True)
+    """
 
     def __init__(
         self,
@@ -56,6 +86,9 @@ class RefinementAgent:
     def inst_param_path(self, inst_param_path):
         self._inst_param_path = inst_param_path
         self.close_and_restart()
+
+    def name(self):
+        return "GSAS-Refinement-Agent"
 
     def unpack_run(self, run):
         self._recent_uid = run.metadata["start"]["uid"]
