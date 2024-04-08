@@ -336,6 +336,8 @@ class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
 
 class PDFReporterMixin:
     """Mixin for sending reports to Kafka as well as Tiled.
+    This wraps every report in a single run because downstream agents operate per-run instead of per-event.
+    This behavior is similar to the pdfstream service.
 
     Parameters
     ----------
@@ -357,6 +359,7 @@ class PDFReporterMixin:
         uid = self._write_event("report", doc)
         self._report_producer("report", doc)
         logger.info(f"Generated report. Tiled: {uid}\n Kafka: {doc.get('uid', 'No UID')}")
+        self.close_and_restart(clear_tell_cache=False, retell_all=False, reason="Per-Run Subscribers")
 
     @classmethod
     def get_beamline_objects(cls) -> dict:
