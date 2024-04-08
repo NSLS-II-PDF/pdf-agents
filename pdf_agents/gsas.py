@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Union
 
-import GSASIIscriptable as G2sc  # TODO (maffettone): Sort out install into env for srv
+import GSASIIscriptable as G2sc
 import numpy as np
 from numpy.typing import ArrayLike
 

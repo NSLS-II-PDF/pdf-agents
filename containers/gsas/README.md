@@ -8,7 +8,8 @@ We had to use the conda install because the pure Fedora and Ubuntu image ran int
 
 ```bash
 cd /path/to/pdf-agents
-curl https://subversion.xray.aps.anl.gov/admin_pyGSAS/downloads/gsas2full-Latest-Linux-x86_64.sh > ./containers/gsas/gsas2full-Latest-Linux-x86_64.sh
+podman pull ghcr.io/nsls-ii-pdf/gsas:conda
+# OR If Rebuilding
 podman build --platform linux/amd64 -t gsas:conda -f containers/gsas/Containerfile-conda .
 podman run -v ./pdf_agents:/src/pdf-agents/pdf_agents:ro -it --rm gsas:conda conda run -n GSASII  --no-capture-output ipython
 ```
