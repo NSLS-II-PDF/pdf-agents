@@ -2,7 +2,6 @@ import ast
 import uuid
 from abc import ABC
 from logging import getLogger
-from turtle import back
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import nslsii.kafka_utils
@@ -34,7 +33,12 @@ class PDFBaseAgent(Agent, ABC):
         offline=False,
         **kwargs,
     ):
-        self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
+        if offline:
+            self._rkvs = {"PDF:desired_exposure_time": 1.0, "PDF:xpdacq:sample_number": 1}
+            for key, val in self._rkvs.items():
+                self._rkvs[key] = str(val).encode("utf-8")
+        else:
+            self._rkvs = redis.Redis(host="info.pdf.nsls2.bnl.gov", port=6379, db=0)  # redis key value store
         self._motor_names = motor_names
         self._motor_resolution = motor_resolution
         self._motor_origins = np.array(motor_origins)
@@ -303,7 +307,7 @@ class PDFBaseAgent(Agent, ABC):
         offline_kafka = OfflineKafka()
         try:
             node = tiled.client.from_profile(f"{beamline_tla}_bluesky_sandbox")
-        except tiled.profile.ProfileNotFound:
+        except tiled.profiles.ProfileNotFound:
             node = None
 
         return dict(
