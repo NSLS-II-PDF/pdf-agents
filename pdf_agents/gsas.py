@@ -145,7 +145,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
 
             gpx.do_refinements([{}])
 
-            return hist.residuals["wR"], hist.data["data"], phase.get_cell_and_esd()
+            return hist.residuals["wR"], hist.data["data"][1], phase.get_cell_and_esd()
 
     def report(self) -> Dict[str, ArrayLike]:
 
@@ -165,13 +165,13 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
             gsas_rwps.append(residual)
             gsas_ycalcs.append(data[:, 3])
             gsas_ydiffs.append(data[:, 5])
-            gsas_as.append(cell["length_a"])
-            gsas_bs.append(cell["length_b"])
-            gsas_cs.append(cell["length_c"])
-            gsas_alphas.append(cell["angle_alpha"])
-            gsas_betas.append(cell["angle_beta"])
-            gsas_gammas.append(cell["angle_gamma"])
-            gsas_volumes.append(cell["volume"])
+            gsas_as.append([x["length_a"] for x in cell]) # REfined value and STD
+            gsas_bs.append([x["length_b"] for x in cell])
+            gsas_cs.append([x["length_c"] for x in cell])
+            gsas_alphas.append([x["angle_alpha"] for x in cell])
+            gsas_betas.append([x["angle_beta"] for x in cell])
+            gsas_gammas.append([x["angle_gamma"] for x in cell])
+            gsas_volumes.append([x["volume"] for x in cell])
 
         return dict(
             data_key=self.data_key,
