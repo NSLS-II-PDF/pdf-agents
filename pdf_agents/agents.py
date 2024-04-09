@@ -46,6 +46,7 @@ class PDFBaseAgent(Agent, ABC):
         self._roi_key = roi_key
         self._roi = roi
         self._norm_region = norm_region
+        self._ordinate = None
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
         self._sample_number = int(self._rkvs.get("PDF:xpdacq:sample_number").decode("utf-8"))
@@ -130,7 +131,10 @@ class PDFBaseAgent(Agent, ABC):
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
-            y = y[idx_min:idx_max]
+
+        y = y[idx_min:idx_max]
+        self._ordinate = ordinate[idx_min:idx_max]  # Update self oridnate. Should be constant unless roi changes.
+
         try:
             x = np.array(
                 [

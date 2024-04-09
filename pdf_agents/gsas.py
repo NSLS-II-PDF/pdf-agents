@@ -97,7 +97,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
     def tell(self, x, y) -> Dict[str, ArrayLike]:
         self._recent_x = x
         self._recent_y = y
-        return dict(independent_variable=x, observable=y)
+        return dict(independent_variable=x, observable=y, ordinate=self._ordinate)
 
     def _do_refinement(self, cif_path: Path, refinement_params: dict):
         """Run refinement in temproary directory, return residuals, data array, and cell dictionary
@@ -124,7 +124,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
             # Save the data for gsas
             np.savetxt(
                 Path(tmp_dir) / "data.xy",
-                np.column_stack([self._recent_x, self._recent_y]),
+                np.column_stack([self._ordinate, self._recent_y]),
                 delimiter=",",
                 fmt="%1.10f",
             )
@@ -165,7 +165,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
             gsas_rwps.append(residual)
             gsas_ycalcs.append(data[:, 3])
             gsas_ydiffs.append(data[:, 5])
-            gsas_as.append([x["length_a"] for x in cell]) # REfined value and STD
+            gsas_as.append([x["length_a"] for x in cell])  # Refined value and STD
             gsas_bs.append([x["length_b"] for x in cell])
             gsas_cs.append([x["length_c"] for x in cell])
             gsas_alphas.append([x["angle_alpha"] for x in cell])
