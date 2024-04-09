@@ -382,3 +382,4 @@ class PDFReporterMixin:
             key="{beamline_tla}.key",
             producer_config=kafka_config["runengine_producer_config"],
         )
+        return ret
