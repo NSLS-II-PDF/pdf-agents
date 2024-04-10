@@ -20,11 +20,16 @@ param_dict_phase1 = {
     }
 }
 
+report_producer = RefinementAgent.get_default_producer()
+
+    
 agent = RefinementAgent(
     # GSAS Args
     cif_paths=["/src/pdf-agents/assets/fcc.cif"],
     refinement_params=[param_dict_phase1],
     inst_param_path="/src/pdf-agents/assets/LaB6_IPF.instprm",
+    # Required report producer
+    report_producer=report_producer,
     # BS Adaptive Args
     ask_on_tell=False,
     report_on_tell=True,

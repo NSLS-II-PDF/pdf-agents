@@ -370,13 +370,12 @@ class PDFReporterMixin:
         self.close_and_restart(clear_tell_cache=False, retell_all=False, reason="Per-Run Subscribers")
 
     @classmethod
-    def get_beamline_objects(cls) -> dict:
-        ret = super().get_beamline_objects()
+    def get_default_producer(cls) -> Publisher:
         beamline_tla = "pdf"
         kafka_config = nslsii.kafka_utils._read_bluesky_kafka_config_file(
             config_file_path="/etc/bluesky/kafka.yml"
         )
-        ret["report_producer"] = Publisher(
+        ret = Publisher(
             topic=f"{beamline_tla}.mmm.bluesky.agents",
             bootstrap_servers=",".join(kafka_config["bootstrap_servers"]),
             key="{beamline_tla}.key",

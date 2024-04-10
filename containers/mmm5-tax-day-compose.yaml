@@ -8,20 +8,34 @@ services:
     build:
       context: ../gsas
       dockerfile: Containerfile-conda
-    command: /bin/bash -c "export BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py && exec conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app"
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0
+    environment:
+      - TILED_API_KEY=$TILED_API_KEY
+      - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
     volumes:
       - type: bind
         source: ../pdf_agents
         target: /src/pdf-agents/pdf_agents
         read_only: true
+      - type: bind
+        source: /etc/bluesky/kafka.yml
+        target: /etc/bluesky/kafka.yml
+        read_only: true
 
   kmeans-gsas:
     image: bluesky:latest
-    command: /bin/bash -c "BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py uvicorn bluesky_adaptive.server:app"
+    command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0
+    environment:
+      - TILED_API_KEY=$TILED_API_KEY
+      - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
     volumes:
       - type: bind
         source: ../pdf_agents
         target: /src/pdf-agents/pdf_agents
+        read_only: true
+      - type: bind
+        source: /etc/bluesky/kafka.yml
+        target: /etc/bluesky/kafka.yml
         read_only: true
     depends_on:
       gsas:
