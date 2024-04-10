@@ -8,7 +8,7 @@ services:
     build:
       context: ../gsas
       dockerfile: Containerfile-conda
-    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /gsas
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
