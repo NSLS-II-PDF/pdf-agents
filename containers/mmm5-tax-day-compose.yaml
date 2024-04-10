@@ -24,10 +24,12 @@ services:
 
   gsas-ui:
     image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
-    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas
+    entrypoint: /modify_dns.sh
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas-agent --agent-port 8000
     environment:
       - DASH_REQUEST_PATHNAME_PREFIX="/gsas/"
     volumes:
+      - ./modify_dns.sh:/modify_dns.sh
       - type: bind
         source: ../../bluesky-adaptive-ui
         target: /src/bluesky-adaptive-ui
@@ -71,7 +73,7 @@ services:
         target: /var/www/html
         read_only: true
     depends_on:
-      gsas:
+      gsas-agent:
         condition: service_started
       gsas-ui:
         condition: service_started
