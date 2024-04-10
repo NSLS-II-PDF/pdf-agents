@@ -27,7 +27,7 @@ services:
     command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas
     volumes:
       - type: bind
-        source: ../bluesky-adaptive-ui
+        source: ../../bluesky-adaptive-ui
         target: /src/bluesky-adaptive-ui
         read_only: true
 
@@ -71,6 +71,9 @@ services:
     depends_on:
       gsas:
         condition: service_started
+      gsas-ui:
+        condition: service_started
       kmeans-gsas:
         condition: service_started
+
 
