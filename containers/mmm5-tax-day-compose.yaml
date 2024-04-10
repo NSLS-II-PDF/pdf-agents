@@ -27,7 +27,7 @@ services:
     entrypoint: /modify_dns.sh
     command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas-agent --agent-port 8000
     environment:
-      - DASH_REQUEST_PATHNAME_PREFIX="/gsas/"
+      - DASH_REQUEST_PATHNAME_PREFIX=/gsas/
     volumes:
       - ./modify_dns.sh:/modify_dns.sh
       - type: bind
