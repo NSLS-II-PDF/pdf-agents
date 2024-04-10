@@ -8,23 +8,21 @@ services:
     build:
       context: ../gsas
       dockerfile: Containerfile-conda
-    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app
-    env:
-      - BS_AGENT_STARTUP_SCRIPT_PATH: /src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
+    command: /bin/bash -c "export BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py && exec conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app"
     volumes:
-      - type: ro
+      - type: bind
         source: ../pdf_agents
         target: /src/pdf-agents/pdf_agents
+        read_only: true
 
   kmeans-gsas:
     image: bluesky:latest
-    command: uvicorn bluesky_adaptive.server:app
-    env:
-      - BS_AGENT_STARTUP_SCRIPT_PATH: /src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py
+    command: /bin/bash -c "BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py uvicorn bluesky_adaptive.server:app"
     volumes:
-      - type: ro
+      - type: bind
         source: ../pdf_agents
         target: /src/pdf-agents/pdf_agents
+        read_only: true
     depends_on:
       gsas:
         condition: service_started
@@ -33,24 +31,23 @@ services:
     image: docker.io/nginx
     init: true
     ports:
-      - "127.0.0.1:11973:11973"
+      - "11973:11973"
     volumes:
-      - type: ro
-        source: ../nginx/nginx.conf
+      - type: bind
+        source: ../containers/nginx/nginx.conf
         target: /etc/nginx/nginx.conf
-      - type: ro
-        source: ../nginx/locs.d
+        read_only: true
+      - type: bind
+        source: ../containers/nginx/locs.d
         target: /etc/nginx/locs.d
-      - type: ro
-        source: ../nginx/html
+        read_only: true
+      - type: bind
+        source: ../containers/nginx/html
         target: /var/www/html
+        read_only: true
     depends_on:
       gsas:
         condition: service_started
       kmeans-gsas:
         condition: service_started
-
-
-  
-
 
