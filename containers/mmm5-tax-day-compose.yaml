@@ -3,12 +3,12 @@ version: '3'
 
 
 services:
-  gsas:
+  gsas-agent:
     image: gsas:conda
     build:
       context: ../gsas
       dockerfile: Containerfile-conda
-    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /gsas
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /gsas-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
@@ -25,15 +25,17 @@ services:
   gsas-ui:
     image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
     command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas
+    environment:
+      - DASH_REQUEST_PATHNAME_PREFIX="/gsas/"
     volumes:
       - type: bind
         source: ../../bluesky-adaptive-ui
         target: /src/bluesky-adaptive-ui
         read_only: true
 
-  kmeans-gsas:
+  kmeans-gsas-agent:
     image: bluesky:latest
-    command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0
+    command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-gsas-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
