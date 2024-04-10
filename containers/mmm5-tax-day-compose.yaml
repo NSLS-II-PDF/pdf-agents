@@ -39,7 +39,7 @@ services:
         condition: service_started
 
   kmeans-gsas-agent:
-    image: bluesky:latest
+    image: ghcr.io/maffettone/bluesky-pods-bluesky:agents
     command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-gsas-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
