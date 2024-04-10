@@ -22,6 +22,15 @@ services:
         target: /etc/bluesky/kafka.yml
         read_only: true
 
+  gsas-ui:
+    image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address gsas
+    volumes:
+      - type: bind
+        source: ../bluesky-adaptive-ui
+        target: /src/bluesky-adaptive-ui
+        read_only: true
+
   kmeans-gsas:
     image: bluesky:latest
     command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0
