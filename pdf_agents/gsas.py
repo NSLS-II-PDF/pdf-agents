@@ -87,6 +87,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
         self._inst_param_path = inst_param_path
         self.close_and_restart()
 
+    @property
     def name(self):
         return "GSAS-Refinement-Agent"
 
