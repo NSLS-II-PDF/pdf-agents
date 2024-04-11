@@ -355,3 +355,4 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
     def ask(self, batch_size):
         """This is a passive agent, that does not request next experiments. It does analysis."""
         raise NotImplementedError
+    

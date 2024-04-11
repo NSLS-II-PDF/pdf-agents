@@ -1,4 +1,4 @@
-"""Kmeans Agent that consumes Peak Fit Agent Output"""
+"""Kmeans Agent that consumes PeakFit Agent Output"""
 
 import uuid
 
