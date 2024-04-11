@@ -39,12 +39,11 @@ services:
         condition: service_started
 
   kmeans-gsas-agent:
-    image: ghcr.io/maffettone/bluesky-pods-bluesky:agents
-    command: uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-gsas-agent
+    image: gsas:conda
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-gsas-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py
-      - PYTHONPATH=/src/pdf-agents
     volumes:
       - type: bind
         source: ../pdf_agents
@@ -56,6 +55,22 @@ services:
         read_only: true
     depends_on:
       gsas:
+        condition: service_started
+
+  kmeans-gsas-ui:
+    image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
+    entrypoint: /modify_dns.sh
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address kmeans-gsas-agent --agent-port 8000
+    environment:
+      - DASH_REQUEST_PATHNAME_PREFIX=/kmeans-gsas/
+    volumes:
+      - ./modify_dns.sh:/modify_dns.sh
+      - type: bind
+        source: ../../bluesky-adaptive-ui
+        target: /src/bluesky-adaptive-ui
+        read_only: true
+    depends_on:
+      gsas-agent:
         condition: service_started
     
   proxy:
