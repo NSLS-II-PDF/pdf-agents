@@ -10,7 +10,7 @@ services:
       dockerfile: Containerfile-conda
     command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /gsas-agent
     environment:
-      - TILED_API_KEY=$TILED_API_KEY
+      - TILED_API_KEY=$(</nsls2/data/bmm/shared/config/agent_runtime/tiled_api_keys/TAX_DAY_API_KEY)
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
     volumes:
       - type: bind
@@ -42,7 +42,7 @@ services:
     image: gsas:conda
     command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-gsas-agent
     environment:
-      - TILED_API_KEY=$TILED_API_KEY
+      - TILED_API_KEY=$(</nsls2/data/bmm/shared/config/agent_runtime/tiled_api_keys/TAX_DAY_API_KEY)
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py
     volumes:
       - type: bind
