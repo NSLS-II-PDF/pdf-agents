@@ -289,6 +289,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
 
     def report(self) -> Dict[str, ArrayLike]:
 
+        peak_amps_poss_fwhms = [] # this is what kmeans will likely consume - possibly better to handle this upstream?
         peak_amplitudes = []
         peak_positions = []
         peak_sigmas = [] # not used for gaussian / lorentzian case, None is a placeholder
@@ -298,10 +299,12 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         ydiffs = []
         x_rois = []
 
+
         if self.fit_func is 'voigt':
             for xroi in self.xrois:
                 peak_amplitude, peak_position, peak_sigma, peak_gamma, peak_fwhm, ycalc, ydiff, x_roi = self.fit_roi(xroi, self.fit_func, self.pos_percent_lim, self.maxcycles)
                 
+                peak_amps_poss_fwhms.append([peak_amplitude,peak_position,peak_fwhm])
                 peak_amplitudes.append(peak_amplitude)
                 peak_positions.append(peak_position)
                 peak_sigmas.append(peak_sigma)
@@ -314,7 +317,8 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         elif self.fit_func is 'gaussian' or self.fit_func is 'lorentzian':
             for xroi in self.xrois:
                 peak_amplitude, peak_position, peak_fwhm, ycalc, ydiff, x_roi = self.fit_roi(xroi, self.fit_func, self.pos_percent_lim, self.maxcycles)
-                
+                                
+                peak_amps_poss_fwhms.append([peak_amplitude,peak_position,peak_fwhm])
                 peak_amplitudes.append(peak_amplitude)
                 peak_positions.append(peak_position)
                 peak_sigmas.append(None)
@@ -337,6 +341,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
             fit_func=self.fit_func,
             pos_percent_lim=self.pos_percent_lim,
             maxcycles=self.maxcycles,
+            peak_amps_poss_fwhms=np.array(peak_amps_poss_fwhms),
             peak_amplitudes=np.array(peak_amplitudes),
             peak_positions=np.array(peak_positions),
             peak_sigmas=np.array(peak_sigmas),
