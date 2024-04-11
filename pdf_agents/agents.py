@@ -349,6 +349,7 @@ class PDFBaseAgent(Agent, ABC):
         """
         self.stop(reason=f"Close and Restart: {reason}")
         self.kafka_consumer.closed = False
+        self._compose_descriptor_bundles = dict()
         if clear_tell_cache:
             self.tell_cache = list()
         elif retell_all:
