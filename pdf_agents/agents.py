@@ -1,4 +1,5 @@
 import ast
+import copy
 import os
 import uuid
 from abc import ABC
@@ -327,6 +328,34 @@ class PDFBaseAgent(Agent, ABC):
 
     def trigger_condition(self, uid) -> bool:
         return True
+
+    def close_and_restart(self, *, clear_tell_cache=False, retell_all=False, reason=""):
+        """Utility for closing and restarting an agent with the same name.
+        This is primarily for methods that change the hyperparameters of an agent on the fly,
+        but in doing so may change the shape/nature of the agent document stream. This will
+        keep the documents consistent between hyperparameters as individual BlueskyRuns.
+        TODO: OVERRIDE FROM ADAPTIVE. MAKE PR TO FIX UPSTREAM.
+
+        Parameters
+        ----------
+        clear_tell_cache : bool, optional
+            Clears the cache of data the agent has been told about, by default False.
+            This is useful for a clean slate.
+        retell_all : bool, optional
+            Resets the cache and tells the agent about all previous data, by default False.
+            This can be useful if the agent has not retained knowledge from previous tells.
+        reason : str, optional
+            Reason for closing and restarting the agent, to be recorded to logs, by default ""
+        """
+        self.stop(reason=f"Close and Restart: {reason}")
+        self.kafka_consumer.closed = False
+        if clear_tell_cache:
+            self.tell_cache = list()
+        elif retell_all:
+            uids = copy.copy(self.tell_cache)
+            self.tell_cache = list()
+            self.tell_agent_by_uid(uids)
+        self.start()
 
 
 class PDFSequentialAgent(PDFBaseAgent, SequentialAgentBase):
