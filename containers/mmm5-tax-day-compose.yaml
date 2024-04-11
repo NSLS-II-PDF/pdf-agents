@@ -70,7 +70,7 @@ services:
         target: /src/bluesky-adaptive-ui
         read_only: true
     depends_on:
-      gsas-agent:
+      kmeans-gsas-agent:
         condition: service_started
     
   proxy:
@@ -97,6 +97,8 @@ services:
       gsas-ui:
         condition: service_started
       kmeans-gsas:
+        condition: service_started
+      kmeans-gsas-ui:
         condition: service_started
 
 
