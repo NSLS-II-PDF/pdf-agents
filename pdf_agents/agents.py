@@ -400,9 +400,10 @@ class PDFReporterMixin:
         super().start(*args, **kwargs)
         self._report_producer("start", self._compose_run_bundle.start_doc)
 
-    def stop(self, *args, **kwargs):
-        super().stop(*args, **kwargs)
-        self._report_producer("stop", self._compose_run_bundle.stop_doc)
+    def stop(self, exit_status="success", reason=""):
+        super().stop(exit_status, reason)
+        stop_doc = self._compose_run_bundle.compose_stop(exit_status=exit_status, reason=reason)
+        self._report_producer("stop", stop_doc)
 
     def _write_event(self, stream, doc, uid=None):
         """Add event to builder as event page, and publish to catalog
