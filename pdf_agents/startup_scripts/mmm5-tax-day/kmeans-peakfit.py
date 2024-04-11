@@ -10,7 +10,7 @@ from bluesky_adaptive.server import register_variable, shutdown_decorator, start
 
 from pdf_agents.sklearn import ActiveKmeansAgent
 
-# Custom Kafka Consumer Needed since we are subscribing downstream from GSAS
+# Custom Kafka Consumer Needed since we are subscribing downstream from PeakFit
 beamline_tla = "pdf"
 kafka_config = nslsii.kafka_utils._read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 kafka_consumer = AgentConsumer(
