@@ -37,6 +37,11 @@ services:
     depends_on:
       gsas-agent:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
 
   kmeans-gsas-agent:
     image: gsas:conda
@@ -72,6 +77,11 @@ services:
     depends_on:
       kmeans-gsas-agent:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
     
   proxy:
     image: docker.io/nginx
@@ -95,10 +105,10 @@ services:
       gsas-agent:
         condition: service_started
       gsas-ui:
-        condition: service_started
+        condition: healthy
       kmeans-gsas:
         condition: service_started
       kmeans-gsas-ui:
-        condition: service_started
+        condition: healthy
 
 
