@@ -105,10 +105,11 @@ services:
       gsas-agent:
         condition: service_started
       gsas-ui:
-        condition: healthy
+        condition: service_healthy
       kmeans-gsas:
         condition: service_started
       kmeans-gsas-ui:
-        condition: healthy
+        condition: service_healthy
+    restart: always
 
 
