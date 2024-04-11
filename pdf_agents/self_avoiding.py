@@ -72,22 +72,32 @@ class WaferManager:
         self._ll = self._center - radius
         self._resolution = resolution
         self._radius = radius
-        self._mask = ~(np.hypot(*np.ogrid[-N//2:N//2, -N//2:N//2]) < N//2) 
-        
+        self._mask = ~(np.hypot(*np.ogrid[-N//2:N//2, -N//2:N//2]) < N//2)
+
         self._measured[self._mask] = np.nan
         self.gamma = 2
         self.sigma = 20
         self.extra = np.zeros_like(self._measured)
+        self.runs = {}
 
     def xy_to_index(self, xy):
         xy = np.atleast_1d(xy)
         rel_xy = xy - self._ll
         return tuple((rel_xy[::-1] // self._resolution).astype("int"))
 
-    def add_measurement(self, xy):
+    def add_measurement(self, xy, hdr=None):
 
         indx = self.xy_to_index(xy)
         self._measured[indx] = 0
+        self.runs[indx] = hdr
+
+    def add_header(self, hdr):
+        xy = self._extract_coords(hdr)
+        self.add_measurement(xy, hdr=hdr)
+
+    @staticmethod
+    def _extract_coords(hdr):
+        raise Exception("WRITE ME")
 
     def debug_vis(self):
         center_x, center_y = self._center
@@ -109,16 +119,28 @@ class WaferManager:
         y, x = pick_next_point(self._measured, N=N, gamma=self.gamma, sigma=self.sigma, bonus=self.extra)
         return (np.stack([x, y]).T * self._resolution + self._ll).T
 
+def manual_demo():
+    wm = WaferManager(40, 0.4, (-130, 50))
+    wm.extra[50:100, 50:100] = -100
+    wm.add_measurement((-110, 50))
+    fig, (ax1, ax2) = wm.debug_vis()
+    ax2.plot(*wm.pick_next_point(N=100), 'o')
+
+    for j in range(15):
+        (x,), (y,) = wm.pick_next_point(N=1)
+        wm.add_measurement((x, y))
+        fig, (ax1, ax2) = wm.debug_vis()
+
+        ax2.plot(*wm.pick_next_point(N=100), 'o')
+
+manual_demo()
 
 wm = WaferManager(40, 0.4, (-130, 50))
-wm.extra[50:100, 50:100] = -100
-wm.add_measurement((-110, 50))
-fig, (ax1, ax2) = wm.debug_vis()
-ax2.plot(*wm.pick_next_point(N=100), 'o')
 
-for j in range(15):
-    (x,), (y,) = wm.pick_next_point(N=1)
-    wm.add_measurement((x, y))
-    fig, (ax1, ax2) = wm.debug_vis()
+def demo_plan(wm):
 
-    ax2.plot(*wm.pick_next_point(N=100), 'o')
+    for j in range(25):
+        (x,), (y,) = wm.pick_next_point(N=1)
+        uid = (yield from move_and_measure(x, y))
+        hdr = db[uid]
+        wm.add_header(hdr)
