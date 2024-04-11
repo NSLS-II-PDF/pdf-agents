@@ -100,8 +100,8 @@ class PDFBaseAgent(Agent, ABC):
         if self.background is not None:
             y = y - self.background[1]
 
+        ordinate = np.array(run.primary.data[self.roi_key]).flatten()
         if self.norm_region is not None:
-            ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = (
                 np.where(ordinate < self.norm_region[0])[0][-1]
                 if len(np.where(ordinate < self.norm_region[0])[0])
@@ -132,6 +132,8 @@ class PDFBaseAgent(Agent, ABC):
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
+        else:
+            idx_min, idx_max = None, None
 
         y = y[idx_min:idx_max]
         self._ordinate = ordinate[idx_min:idx_max]  # Update self oridnate. Should be constant unless roi changes.

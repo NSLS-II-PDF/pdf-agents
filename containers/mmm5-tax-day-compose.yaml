@@ -15,8 +15,8 @@ services:
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/gsas.py
     volumes:
       - type: bind
-        source: ../pdf_agents
-        target: /src/pdf-agents/pdf_agents
+        source: ../
+        target: /src/pdf-agents/
         read_only: true
       - type: bind
         source: /etc/bluesky/kafka.yml
@@ -53,8 +53,8 @@ services:
       - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/kmeans-gsas.py
     volumes:
       - type: bind
-        source: ../pdf_agents
-        target: /src/pdf-agents/pdf_agents
+        source: ../
+        target: /src/pdf-agents/
         read_only: true
       - type: bind
         source: /etc/bluesky/kafka.yml

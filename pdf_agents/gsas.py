@@ -176,9 +176,9 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
 
         return dict(
             data_key=self.data_key,
-            roi_key=self.roi,
-            roi=self.roi,
-            norm_region=self.norm_region,
+            roi_key=self.roi_key if self.roi_key is not None else "",
+            roi=self.roi if self.roi is not None else "",
+            norm_region=self.norm_region if self.norm_region is not None else "",
             observable_uid=self._recent_uid,
             independent_variable=self._recent_x,
             observable=self._recent_y,
