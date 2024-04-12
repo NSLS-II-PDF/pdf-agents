@@ -274,8 +274,6 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         peak_amplitudes = []
         peak_positions = []
         peak_fwhms = []
-        ycalcs = []
-        ydiffs = []
         x_rois = []
 
         if self.fit_func == "voigt":
@@ -288,9 +286,6 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
                 peak_amplitudes.append(peak_amplitude)
                 peak_positions.append(peak_position)
                 peak_fwhms.append(peak_fwhm)
-                ycalcs.append(ycalc)
-                ydiffs.append(ydiff)
-                x_rois.append(x_roi)
 
         elif self.fit_func == "gaussian" or self.fit_func == "lorentzian":
             for xroi in self.xrois:
@@ -302,20 +297,17 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
                 peak_amplitudes.append(peak_amplitude)
                 peak_positions.append(peak_position)
                 peak_fwhms.append(peak_fwhm)
-                ycalcs.append(ycalc)
-                ydiffs.append(ydiff)
-                x_rois.append(x_roi)
 
         return dict(
             data_key=self.data_key,
-            roi_key=self.roi,
-            roi=self.roi,
-            norm_region=self.norm_region,
+            roi_key=self.roi_key if self.roi_key is not None else "",
+            roi=self.roi if self.roi is not None else "",
             observable_uid=self._recent_uid,
             independent_variable=self._recent_x,
             ordinate=self._ordinate,
             observable=self._recent_y,
             xrois=self.xrois,
+            peak_fit_rois=self.xrois,
             fit_func=self.fit_func,
             pos_percent_lim=self.pos_percent_lim,
             maxcycles=self.maxcycles,
@@ -323,9 +315,6 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
             peak_amplitudes=np.array(peak_amplitudes),
             peak_positions=np.array(peak_positions),
             peak_fwhms=np.array(peak_fwhms),
-            ycalc=np.array(ycalcs),
-            ydiffs=np.array(ydiffs),
-            x_rois=np.array(x_rois),
         )
 
     def ask(self, batch_size):
