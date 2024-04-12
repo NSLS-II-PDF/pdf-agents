@@ -29,7 +29,7 @@ class Agent(ActiveKmeansAgent):
         return "GSAS-Based-Active-Kmeans"
 
     def trigger_condition(self, uid) -> bool:
-        return self.exp_catalog.metadata["start"]["agent_name"].startswith("GSAS-Refinement-Agent")
+        return self.exp_catalog[uid].metadata["start"]["agent_name"].startswith("GSAS-Refinement-Agent")
 
 
 agent = Agent(
