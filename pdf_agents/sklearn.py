@@ -33,8 +33,17 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
             self.clear_caches()
         return super().close_and_restart(clear_tell_cache=clear_tell_cache, retell_all=retell_all, reason=reason)
 
+    @property
+    def n_clusters(self):
+        return self.model.n_clusters
+
+    @n_clusters.setter
+    def n_clusters(self, value):
+        self.model.set_params(n_clusters=int(value))
+
     def server_registrations(self) -> None:
         self._register_method("clear_caches")
+        self._register_property("n_clusters")
         return super().server_registrations()
 
     def tell(self, x, y):
