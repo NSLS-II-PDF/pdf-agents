@@ -67,28 +67,13 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
     def cif_paths(self):
         return self._cif_paths
 
-    @cif_paths.setter
-    def cif_paths(self, cif_paths):
-        self._cif_paths = cif_paths
-        self.close_and_restart()
-
     @property
     def refinement_params(self):
         return self._refinement_params
 
-    @refinement_params.setter
-    def refinement_params(self, refinement_params):
-        self._refinement_params = refinement_params
-        self.close_and_restart()
-
     @property
     def inst_param_path(self):
         return self._inst_param_path
-
-    @inst_param_path.setter
-    def inst_param_path(self, inst_param_path):
-        self._inst_param_path = inst_param_path
-        self.close_and_restart()
 
     @property
     def recent_uid(self):

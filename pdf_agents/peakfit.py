@@ -70,11 +70,6 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
     def xrois(self):
         return self._xrois
 
-    @xrois.setter
-    def xrois(self, xrois):
-        self._xrois = xrois
-        self.close_and_restart()
-
     @property
     def fit_func(self):
         return self._fit_func
@@ -90,7 +85,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
 
     @pos_percent_lim.setter
     def pos_percent_lim(self, pos_percent_lim):
-        self._pos_percent_lim = pos_percent_lim
+        self._pos_percent_lim = float(pos_percent_lim)
         self.close_and_restart()
 
     @property
@@ -99,7 +94,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
 
     @maxcycles.setter
     def maxcycles(self, maxcycles):
-        self._maxcycles = maxcycles
+        self._maxcycles = int(maxcycles)
         self.close_and_restart()
 
     @property
