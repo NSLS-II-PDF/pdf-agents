@@ -34,6 +34,7 @@ class PDFBaseAgent(Agent, ABC):
         roi: Optional[Tuple] = None,
         norm_region: Optional[Tuple] = None,
         offline=False,
+        metadata=None,
         **kwargs,
     ):
         if offline:
@@ -75,6 +76,8 @@ class PDFBaseAgent(Agent, ABC):
             roi_key=self.roi_key,
             roi=self.roi,
         )
+        metadata = metadata or {}
+        md.update(metadata)
         super().__init__(*args, metadata=md, **_default_kwargs)
 
     def measurement_plan(self, point: ArrayLike) -> Tuple[str, List, Dict]:

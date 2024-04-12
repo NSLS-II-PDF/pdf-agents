@@ -22,7 +22,7 @@ param_dict_phase1 = {
 
 report_producer = RefinementAgent.get_default_producer()
 
-    
+
 agent = RefinementAgent(
     # GSAS Args
     cif_paths=["/src/pdf-agents/assets/fcc.cif"],

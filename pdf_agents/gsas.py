@@ -49,6 +49,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
         cif_paths: List[Union[str, Path]],
         refinement_params: List[dict],
         inst_param_path: Union[str, Path],
+        metadata: dict = None,
         **kwargs,
     ):
         self._cif_paths = cif_paths
@@ -57,7 +58,9 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
         self._recent_x = None
         self._recent_y = None
         self._recent_uid = None
-        super().__init__(**kwargs)
+        metadata = metadata or {}
+        metadata.update(refinement_params)
+        super().__init__(metadata=metadata, **kwargs)
         self.report_on_tell = True
 
     @property
@@ -184,7 +187,6 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
             observable=self._recent_y,
             cif_paths=self.cif_paths,
             inst_param_path=self.inst_param_path,
-            refinement_params=self.refinement_params,
             gsas_rwps=np.array(gsas_rwps),
             gsas_ycalcs=np.stack(gsas_ycalcs),
             gsas_ydiffs=np.stack(gsas_ydiffs),
