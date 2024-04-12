@@ -109,8 +109,8 @@ class PDFBaseAgent(Agent, ABC):
             scaled_bkg = y.max() / self.background[1].max() * self.background[1]
             y = y - scaled_bkg
 
+        ordinate = np.array(run.primary.data[self.roi_key]).flatten()
         if self.roi is not None:
-            ordinate = np.array(run.primary.data[self.roi_key]).flatten()
             idx_min = np.where(ordinate < self.roi[0])[0][-1] if len(np.where(ordinate < self.roi[0])[0]) else None
             idx_max = np.where(ordinate > self.roi[1])[0][-1] if len(np.where(ordinate > self.roi[1])[0]) else None
         else:
