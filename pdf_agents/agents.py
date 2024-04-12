@@ -401,9 +401,16 @@ class PDFReporterMixin:
         self._report_producer("start", self._compose_run_bundle.start_doc)
 
     def stop(self, exit_status="success", reason=""):
-        super().stop(exit_status, reason)
+        logger.debug("Attempting agent stop.")
         stop_doc = self._compose_run_bundle.compose_stop(exit_status=exit_status, reason=reason)
+        self.agent_catalog.v1.insert("stop", stop_doc)
         self._report_producer("stop", stop_doc)
+        self.kafka_producer.flush()
+        self.kafka_consumer.stop()
+        logger.info(
+            f"Stopped agent with exit status {exit_status.upper()}"
+            f"{(' for reason: ' + reason) if reason else '.'}"
+        )
 
     def _write_event(self, stream, doc, uid=None):
         """Add event to builder as event page, and publish to catalog
