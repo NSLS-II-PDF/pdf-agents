@@ -32,7 +32,6 @@ class PDFBaseAgent(Agent, ABC):
         data_key: str = "chi_I",
         roi_key: str = "chi_Q",
         roi: Optional[Tuple] = None,
-        norm_region: Optional[Tuple] = None,
         offline=False,
         metadata=None,
         **kwargs,
@@ -49,7 +48,6 @@ class PDFBaseAgent(Agent, ABC):
         self._data_key = data_key
         self._roi_key = roi_key
         self._roi = roi
-        self._norm_region = norm_region
         self._ordinate = None
         # Attributes pulled in from Redis
         self._exposure = float(self._rkvs.get("PDF:desired_exposure_time").decode("utf-8"))
@@ -100,38 +98,16 @@ class PDFBaseAgent(Agent, ABC):
         return "agent_move_and_measure_hanukkah23", [], {"x": point[0], "y": point[1], "exposure": 5}
 
     def unpack_run(self, run) -> Tuple[Union[float, ArrayLike], Union[float, ArrayLike]]:
-        """Subtracts background and returns motor positions and data"""
+        """Unpacks a run by:
+        - Reading the data from the run
+        - Scaling the bakcground to the data, assuming the maixmum peak in the background and data are the same
+        - Subtracting the background if provided
+        """
         y = run.primary.data[self.data_key].read().flatten()
+
         if self.background is not None:
-            y = y - self.background[1]
-
-        ordinate = np.array(run.primary.data[self.roi_key]).flatten()
-        if self.norm_region is not None:
-            idx_min = (
-                np.where(ordinate < self.norm_region[0])[0][-1]
-                if len(np.where(ordinate < self.norm_region[0])[0])
-                else None
-            )
-            idx_max = (
-                np.where(ordinate > self.norm_region[1])[0][-1]
-                if len(np.where(ordinate > self.norm_region[1])[0])
-                else None
-            )
-            bkg_idx_min = (
-                np.where(self.background[0] < self.norm_region[0])[0][-1]
-                if len(np.where(self.background[0] < self.norm_region[0])[0])
-                else None
-            )
-            bkg_idx_max = (
-                np.where(self.background[0] > self.norm_region[1])[0][-1]
-                if len(np.where(self.background[0] > self.norm_region[1])[0])
-                else None
-            )
-            scale_factor = np.sum(self.background[1][bkg_idx_min:bkg_idx_max]) / np.sum(y[idx_min:idx_max])
-        else:
-            scale_factor = 1
-
-        y = y * scale_factor
+            scaled_bkg = y.max() / self.background[1].max() * self.background[1]
+            y = y - scaled_bkg
 
         if self.roi is not None:
             ordinate = np.array(run.primary.data[self.roi_key]).flatten()
@@ -163,7 +139,6 @@ class PDFBaseAgent(Agent, ABC):
         self._register_property("roi_key")
         self._register_property("roi")
         self._register_property("background")
-        self._register_property("norm_region")
         return super().server_registrations()
 
     @property
@@ -264,15 +239,6 @@ class PDFBaseAgent(Agent, ABC):
     @roi.setter
     def roi(self, value: Tuple[float, float]):
         self._roi = value
-        self.close_and_restart(clear_tell_cache=True)
-
-    @property
-    def norm_region(self):
-        return self._norm_region
-
-    @norm_region.setter
-    def norm_region(self, value: Tuple[float, float]):
-        self._norm_region = value
         self.close_and_restart(clear_tell_cache=True)
 
     @staticmethod
