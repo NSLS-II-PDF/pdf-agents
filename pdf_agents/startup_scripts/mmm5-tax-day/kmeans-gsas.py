@@ -54,11 +54,11 @@ class Agent(ActiveKmeansAgent):
 
 agent = Agent(
     # K means Args
-    bounds=np.array([(-32, 32), (-32, 32)]),
+    bounds=np.array([(-30, 30), (-30, 30)]),
     k_clusters=4,
     # PDF Args
     motor_names=["xstage", "ystage"],
-    motor_origins=[-154.7682, 48.9615],
+    motor_origins=[-128.85, 49.91],
     # BS Adaptive Args
     kafka_consumer=kafka_consumer,
     ask_on_tell=False,

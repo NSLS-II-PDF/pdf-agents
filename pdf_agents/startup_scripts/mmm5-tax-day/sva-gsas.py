@@ -31,13 +31,33 @@ class Agent(ScientificValueAgentBase):
     def trigger_condition(self, uid) -> bool:
         return self.exp_catalog.metadata["start"]["agent_name"].startswith("GSAS-Refinement-Agent")
 
+    def unpack_run(self, run):
+        data = run.report.data
+        x = data["raw_independent_variable"].read().flatten()
+        y = np.concatenate(
+            [
+                data[key].read().flatten()
+                for key in [
+                    "gsas_as",
+                    "gsas_bs",
+                    "gsas_cs",
+                    "gsas_alphas",
+                    "gsas_betas",
+                    "gsas_gammas",
+                    "gsas_volumes",
+                    "gsas_rwps",
+                ]
+            ]
+        )
+        return x, y
+
 
 agent = Agent(
     # SVA Args
-    bounds=np.array([(-32, 32), (-32, 32)]),
+    bounds=np.array([(-30, 30), (-30, 30)]),
     # PDF Args
     motor_names=["xstage", "ystage"],
-    motor_origins=[-154.7682, 48.9615],
+    motor_origins=[-128.85, 49.91],
     # BS Adaptive Args
     kafka_consumer=kafka_consumer,
     ask_on_tell=False,
