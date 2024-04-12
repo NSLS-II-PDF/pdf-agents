@@ -40,6 +40,7 @@ class PassiveKmeansAgent(PDFBaseAgent, ClusterAgentBase):
     @n_clusters.setter
     def n_clusters(self, value):
         self.model.set_params(n_clusters=int(value))
+        self.close_and_restart()
 
     def server_registrations(self) -> None:
         self._register_method("clear_caches")
