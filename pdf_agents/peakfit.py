@@ -116,12 +116,12 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
 
     def server_registrations(self) -> None:
         super().server_registrations()
-        self._register_property("Peak Fit ROIs", self, "xrois")
-        self._register_property("Fit Function", self, "fit_func")
-        self._register_property("Position Percent Limit", self, "pos_percent_lim")
-        self._register_property("Max Cycles", self, "maxcycles")
-        self._register_property("Recent UID", self.recent_uid)
-        self._register_property("Recent X", self.recent_x)
+        self._register_property("Peak Fit ROIs", "xrois")
+        self._register_property("Fit Function", "fit_func")
+        self._register_property("Position Percent Limit", "pos_percent_lim")
+        self._register_property("Max Cycles", "maxcycles")
+        self._register_property("Recent UID", "recent_uid")
+        self._register_property("Recent X", "recent_x")
 
     def unpack_run(self, run):
         self._recent_uid = run.metadata["start"]["uid"]
