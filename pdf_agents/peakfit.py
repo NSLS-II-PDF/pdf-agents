@@ -274,7 +274,6 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         peak_amplitudes = []
         peak_positions = []
         peak_fwhms = []
-        x_rois = []
 
         if self.fit_func == "voigt":
             for xroi in self.xrois:
@@ -303,7 +302,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
             roi_key=self.roi_key if self.roi_key is not None else "",
             roi=self.roi if self.roi is not None else "",
             observable_uid=self._recent_uid,
-            independent_variable=self._recent_x,
+            raw_independent_variable=self._recent_x,
             ordinate=self._ordinate,
             observable=self._recent_y,
             xrois=self.xrois,
