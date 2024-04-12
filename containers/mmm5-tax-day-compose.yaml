@@ -84,6 +84,44 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
+
+  peakfinding-agent:
+    image: gsas:conda
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /peakfinding-agent
+    environment:
+      - TILED_API_KEY=$TILED_API_KEY
+      - HTTPSERVER_API_KEY=$HTTPSERVER_API_KEY
+      - BS_AGENT_STARTUP_SCRIPT_PATH=/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/peakfit.py
+    volumes:
+      - type: bind
+        source: ../
+        target: /src/pdf-agents/
+        read_only: true
+      - type: bind
+        source: /etc/bluesky/kafka.yml
+        target: /etc/bluesky/kafka.yml
+        read_only: true
+
+  peakfinding-ui:
+    image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
+    entrypoint: /modify_dns.sh
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address peakfinding-agent --agent-port 8000
+    environment:
+      - DASH_REQUEST_PATHNAME_PREFIX=/peakfinding/
+    volumes:
+      - ./modify_dns.sh:/modify_dns.sh
+      - type: bind
+        source: ../../bluesky-adaptive-ui
+        target: /src/bluesky-adaptive-ui
+        read_only: true
+    depends_on:
+      peakfinding-agent:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
     
   proxy:
     image: docker.io/nginx
@@ -111,6 +149,10 @@ services:
       kmeans-gsas:
         condition: service_started
       kmeans-gsas-ui:
+        condition: service_healthy
+      peakfinding-agent:
+        condition: service_started
+      peakfinding-ui:
         condition: service_healthy
     restart: always
 
