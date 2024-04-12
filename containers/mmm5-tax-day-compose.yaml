@@ -85,9 +85,9 @@ services:
       timeout: 10s
       retries: 5
 
-  peakfinding-agent:
+  peakfit-agent:
     image: gsas:conda
-    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /peakfinding-agent
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /peakfit-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - HTTPSERVER_API_KEY=$HTTPSERVER_API_KEY
@@ -102,12 +102,12 @@ services:
         target: /etc/bluesky/kafka.yml
         read_only: true
 
-  peakfinding-ui:
+  peakfit-ui:
     image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
     entrypoint: /modify_dns.sh
-    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address peakfinding-agent --agent-port 8000
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address peakfit-agent --agent-port 8000
     environment:
-      - DASH_REQUEST_PATHNAME_PREFIX=/peakfinding/
+      - DASH_REQUEST_PATHNAME_PREFIX=/peakfit/
     volumes:
       - ./modify_dns.sh:/modify_dns.sh
       - type: bind
@@ -115,7 +115,7 @@ services:
         target: /src/bluesky-adaptive-ui
         read_only: true
     depends_on:
-      peakfinding-agent:
+      peakfit-agent:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8050"]
@@ -123,9 +123,9 @@ services:
       timeout: 10s
       retries: 5
       
-  kmeans-peakfinding-agent:
+  kmeans-peakfit-agent:
     image: gsas:conda
-    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-peakfinding-agent
+    command: conda run -n GSASII --no-capture-output uvicorn bluesky_adaptive.server:app --host 0.0.0.0 --root-path /kmeans-peakfit-agent
     environment:
       - TILED_API_KEY=$TILED_API_KEY
       - HTTPSERVER_API_KEY=$HTTPSERVER_API_KEY
@@ -140,12 +140,12 @@ services:
         target: /etc/bluesky/kafka.yml
         read_only: true
 
-  kmeans-peakfinding-ui:
+  kmeans-peakfit-ui:
     image: ghcr.io/maffettone/bluesky-adaptive-ui:latest
     entrypoint: /modify_dns.sh
-    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address kmeans-peakfinding-agent --agent-port 8000
+    command: python3 /src/bluesky-adaptive-ui/bluesky_adaptive_ui/default_dash_app/app.py --agent-address kmeans-peakfit-agent --agent-port 8000
     environment:
-      - DASH_REQUEST_PATHNAME_PREFIX=/kmeans-peakfinding/
+      - DASH_REQUEST_PATHNAME_PREFIX=/kmeans-peakfit/
     volumes:
       - ./modify_dns.sh:/modify_dns.sh
       - type: bind
@@ -153,7 +153,7 @@ services:
         target: /src/bluesky-adaptive-ui
         read_only: true
     depends_on:
-      kmeans-peakfinding-agent:
+      kmeans-peakfit-agent:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8050"]
@@ -188,13 +188,13 @@ services:
         condition: service_started
       kmeans-gsas-ui:
         condition: service_healthy
-      peakfinding-agent:
+      peakfit-agent:
         condition: service_started
-      peakfinding-ui:
+      peakfit-ui:
         condition: service_healthy
-      kmeans-peakfinding-agent:
+      kmeans-peakfit-agent:
         condition: service_started
-      kmeans-peakfinding-ui:
+      kmeans-peakfit-ui:
         condition: service_healthy
     restart: always
 
