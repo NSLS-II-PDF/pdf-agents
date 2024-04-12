@@ -2,9 +2,9 @@ import logging
 from typing import Dict, List
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.optimize import curve_fit
 from scipy.special import wofz
-from numpy.typing import ArrayLike
 
 from pdf_agents.agents import PDFBaseAgent, PDFReporterMixin
 
@@ -57,7 +57,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
     ):
         self._xrois = xrois
         self._fit_func = fit_func
-        self._pos_percent_lim: pos_percent_lim
+        self._pos_percent_lim = pos_percent_lim
         self._maxcycles: maxcycles
         self._recent_x = None
         self._recent_y = None
