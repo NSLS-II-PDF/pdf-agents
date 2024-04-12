@@ -59,7 +59,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
         self._recent_y = None
         self._recent_uid = None
         metadata = metadata or {}
-        metadata.update(refinement_params)
+        metadata.update(refinement_params=self._refinement_params)
         super().__init__(metadata=metadata, **kwargs)
         self.report_on_tell = True
 
@@ -183,7 +183,7 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
             roi=self.roi if self.roi is not None else "",
             norm_region=self.norm_region if self.norm_region is not None else "",
             observable_uid=self._recent_uid,
-            independent_variable=self._recent_x,
+            raw_independent_variable=self._recent_x,
             observable=self._recent_y,
             cif_paths=self.cif_paths,
             inst_param_path=self.inst_param_path,

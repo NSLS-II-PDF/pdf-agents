@@ -31,6 +31,26 @@ class Agent(ActiveKmeansAgent):
     def trigger_condition(self, uid) -> bool:
         return self.exp_catalog[uid].metadata["start"]["agent_name"].startswith("GSAS-Refinement-Agent")
 
+    def unpack_run(self, run):
+        data = run.report.data
+        x = data["raw_independent_variable"].read().flatten()
+        y = np.concatenate(
+            [
+                data[key].read().flatten()
+                for key in [
+                    "gsas_as",
+                    "gsas_bs",
+                    "gsas_cs",
+                    "gsas_alphas",
+                    "gsas_betas",
+                    "gsas_gammas",
+                    "gsas_volumes",
+                    "gsas_rwps",
+                ]
+            ]
+        )
+        return x, y
+
 
 agent = Agent(
     # K means Args
