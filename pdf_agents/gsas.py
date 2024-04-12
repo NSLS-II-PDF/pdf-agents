@@ -91,8 +91,24 @@ class RefinementAgent(PDFReporterMixin, PDFBaseAgent):
         self.close_and_restart()
 
     @property
+    def recent_uid(self):
+        return self._recent_uid
+
+    @property
+    def recent_x(self):
+        return self._recent_x
+
+    @property
     def name(self):
         return "GSAS-Refinement-Agent"
+
+    def server_registrations(self) -> None:
+        super().server_registrations()
+        self._register_property("CIF paths", self.cif_paths)
+        self._register_property("refinement_params", self.refinement_params)
+        self._register_property("Instrument Parameter Path", self.inst_param_path)
+        self._register_property("Recent UID", self.recent_uid)
+        self._register_property("Recent X", self.recent_x)
 
     def unpack_run(self, run):
         self._recent_uid = run.metadata["start"]["uid"]

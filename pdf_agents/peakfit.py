@@ -1,4 +1,5 @@
 import logging
+from http import server
 from typing import Dict, List
 
 import numpy as np
@@ -101,8 +102,26 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         self._maxcycles = maxcycles
         self.close_and_restart()
 
+    @property
+    def recent_uid(self):
+        return self._recent_uid
+
+    @property
+    def recent_x(self):
+        return self._recent_x
+
+    @property
     def name(self):
         return "Peak-Fit-Agent"
+
+    def server_registrations(self) -> None:
+        super().server_registrations()
+        self._register_property("Peak Fit ROIs", self, "xrois")
+        self._register_property("Fit Function", self, "fit_func")
+        self._register_property("Position Percent Limit", self, "pos_percent_lim")
+        self._register_property("Max Cycles", self, "maxcycles")
+        self._register_property("Recent UID", self.recent_uid)
+        self._register_property("Recent X", self.recent_x)
 
     def unpack_run(self, run):
         self._recent_uid = run.metadata["start"]["uid"]
