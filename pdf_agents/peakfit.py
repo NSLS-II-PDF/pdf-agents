@@ -167,9 +167,9 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
         peak_gamma: float
             Lorentzian broadening parameter
         """
-        roi_indices = np.where((self._recent_x >= xroi[0]) & (self._recent_x <= xroi[1]))
+        roi_indices = np.where((self._ordinate >= xroi[0]) & (self._ordinate <= xroi[1]))
 
-        x_roi = self._recent_x[roi_indices]
+        x_roi = self._ordinate[roi_indices]
         y_roi = self._recent_y[roi_indices]
 
         # find maximum y within ROI
@@ -313,6 +313,7 @@ class PeakFitAgent(PDFReporterMixin, PDFBaseAgent):
             norm_region=self.norm_region,
             observable_uid=self._recent_uid,
             independent_variable=self._recent_x,
+            ordinate=self._ordinate,
             observable=self._recent_y,
             xrois=self.xrois,
             fit_func=self.fit_func,
