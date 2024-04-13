@@ -64,11 +64,7 @@ agent = Agent(
 @startup_decorator
 def startup():
     agent.start()
-    path = (
-        "/nsls2/data/pdf/shared/config/source/"
-        "pdf-agents/pdf_agents/startup_scripts/"
-        "mmm5-tax-day/fri-peak-fit-out-uids.txt"
-    )
+    path = "/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/fri-peak-fit-out-uids.txt"
     with open(path, "r") as f:
         uids = []
         for line in f:

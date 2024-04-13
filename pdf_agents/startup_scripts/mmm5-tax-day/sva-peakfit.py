@@ -55,19 +55,15 @@ agent = Agent(
     motor_origins=[-128.85, 49.91],
     # BS Adaptive Args
     kafka_consumer=kafka_consumer,
-    ask_on_tell=True,
-    report_on_tell=True,
+    ask_on_tell=False,
+    report_on_tell=False,
 )
 
 
 @startup_decorator
 def startup():
     agent.start()
-    path = (
-        "/nsls2/data/pdf/shared/config/source/"
-        "pdf-agents/pdf_agents/startup_scripts/"
-        "mmm5-tax-day/fri-peak-fit-out-uids.txt"
-    )
+    path = "/src/pdf-agents/pdf_agents/startup_scripts/mmm5-tax-day/fri-peak-fit-out-uids.txt"
     with open(path, "r") as f:
         uids = []
         for line in f:
