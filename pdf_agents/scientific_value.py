@@ -110,7 +110,11 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
         return scientific_value_function(X, Y, y_distance_function=self.observable_distance_function)
 
     def tell(self, x, y):
-        return PassiveKmeansAgent.tell(self, x, y)
+        """Update tell using relative info"""
+        x = x - self._motor_origins
+        doc = super().tell(x, y)
+        doc["absolute_position_offset"] = self._motor_origins
+        return doc
 
     def report(self):
         value = self._value_function(np.array(self.independent_cache), np.array(self.observable_cache))
