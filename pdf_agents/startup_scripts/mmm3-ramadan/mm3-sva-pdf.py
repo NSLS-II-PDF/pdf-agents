@@ -1,4 +1,5 @@
 """SVA agent, that finds regions fo scientific value, and tiggers PDF to supplement XRD."""
+
 from bluesky_adaptive.server import register_variable, shutdown_decorator, startup_decorator
 
 from pdf_agents.scientific_value import ScientificValueAgentBase
