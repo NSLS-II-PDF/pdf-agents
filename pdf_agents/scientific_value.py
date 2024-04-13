@@ -112,9 +112,14 @@ class ScientificValueAgentBase(PDFBaseAgent, ABC):
     def tell(self, x, y):
         """Update tell using relative info"""
         x = x - self._motor_origins
-        doc = super().tell(x, y)
-        doc["absolute_position_offset"] = self._motor_origins
-        return doc
+        self.independent_cache.append(x)
+        self.observable_cache.append(y)
+        return dict(
+            independent_variable=x,
+            observable=y,
+            cache_len=len(self.independent_cache),
+            absolute_position_offset=self._motor_origins,
+        )
 
     def report(self):
         value = self._value_function(np.array(self.independent_cache), np.array(self.observable_cache))
