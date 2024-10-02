@@ -225,7 +225,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             grid = make_wafer_grid_list(*self.bounds.ravel(), step=self.motor_resolution)
             labels = self.model.predict(sorted_observables)
             proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
-            shannon = -np.sum(proby_preds * np.log(1 / proby_preds), axis=-1)
+            shannon = -np.sum(proby_preds * np.log(proby_preds), axis=-1)
             top_indicies = np.argsort(shannon) if batch_size is None else np.argsort(shannon)[-batch_size:]
             return grid[top_indicies], centers
 
