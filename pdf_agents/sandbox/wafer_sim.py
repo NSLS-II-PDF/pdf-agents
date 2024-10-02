@@ -86,7 +86,7 @@ class WaferAgentBase(ABC):
 
     def experiment(self, n_steps: int, init_points=10):
         if init_points > 0:
-            grid = make_wafer_grid_list(-25, 25, -25, 25, step=0.1)
+            grid = make_wafer_grid_list(-29.5, 29.5, -29.5, 29.5, step=0.1)
             random_indicies = np.random.choice(grid.shape[0], size=init_points, replace=False)
             points = grid[random_indicies, :]
             for point in points:
@@ -358,8 +358,8 @@ if __name__ == "__main__":
         data_array_string="iq",
         k_clusters=6,
         resolution=0.05,
-        bounds=[[-29, 29], [-29, 29]],
-        init_points=200,
+        bounds=[[-30, 30], [-30, 30]],
+        init_points=500,
         n_steps=20,
     )
     print("Experimnent Done")
