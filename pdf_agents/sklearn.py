@@ -226,7 +226,7 @@ class ActiveKmeansAgent(PassiveKmeansAgent):
             labels = self.model.predict(sorted_observables)
             proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(grid)
             shannon = -np.sum(proby_preds * np.log(proby_preds), axis=-1)
-            top_indicies = np.argsort(shannon) if batch_size is None else np.argsort(shannon)[-batch_size:]
+            top_indicies = np.argsort(shannon)[::-1] if batch_size is None else np.argsort(shannon)[-batch_size:]
             return grid[top_indicies], centers
 
     def ask(self, batch_size=1):
