@@ -212,10 +212,6 @@ class WaferClusterAgent(WaferAgentBase):
             top_indicies = (
                 np.argsort(shannon)[::-1] if batch_size is None else np.argsort(shannon)[-batch_size:]
             )  # TODO: NOTE THIS CHANGE
-            # top_indicies = np.argsort(shannon) if batch_size is None else np.argsort(shannon)[-batch_size:]
-            print(f"Min Shannon Entropy: {shannon.min()}")
-            print(f"Max Shannon Entropy: {shannon.max()}")
-            print(f"Top 5 Shannon Entropy: {shannon[top_indicies[:5]]}")
             return self.grid[top_indicies], centers
 
     def ask(self, batch_size=1):
@@ -294,23 +290,22 @@ class SVAgent(WaferAgentBase):
         return ScientificValueAgentBase._value_function(self, X, Y)
 
 
-if __name__ == "__main__":
-    # Example usage
+def kmeans_main(*, dataset, data_array_string, k_clusters, resolution, bounds, init_points=20, n_steps=200):
     time = ttime.time()
     agent = WaferClusterAgent(
-        dataset=Path("~/Downloads/ds_AlLiFe_17420-points_complex.nc").expanduser(),
-        data_array_string="iq",
-        k_clusters=4,
-        resolution=0.05,
-        bounds=[[-29, 29], [-29, 29]],
+        dataset=dataset,
+        data_array_string=data_array_string,
+        k_clusters=k_clusters,
+        resolution=resolution,
+        bounds=bounds,
     )
-    agent.experiment(1000, init_points=100)
-    # print(agent._doc_cache)
+    agent.experiment(n_steps, init_points=init_points)
     print(f"Time taken: {ttime.time() - time}")
     print("Experimnent Done")
+    return agent
 
-    # Plotting
 
+def kmeans_plotting(agent):
     # Add model
     sorted_independents, sorted_observables = agent._construct_model()
     centers = agent.model.cluster_centers_
@@ -318,7 +313,7 @@ if __name__ == "__main__":
     proby_preds = LogisticRegression(solver="newton-cg").fit(sorted_independents, labels).predict_proba(agent.grid)
     shannon = -np.sum(proby_preds * np.log(proby_preds), axis=-1)
     num_classes = proby_preds.shape[1]
-    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+    fig, axes = plt.subplots(3, 4, figsize=(20, 10))
     axes = axes.ravel()
 
     sc = axes[-1].scatter(*sorted_independents.T, c=labels, cmap="tab10")
@@ -327,6 +322,9 @@ if __name__ == "__main__":
     sc = axes[-2].scatter(*zip(*agent.independent_cache), c=range(len(agent.independent_cache)), cmap="viridis")
     plt.colorbar(sc, ax=axes[-2])
     axes[-2].set_title("Observations and Order")
+    for i, center in enumerate(centers):
+        axes[-3].plot(center + i)
+    axes[-3].set_title("Cluster Centers")
 
     # Add circle
     radius = 30
@@ -346,6 +344,27 @@ if __name__ == "__main__":
 
     for ax in axes:
         ax.set_aspect("equal")
+    axes[-3].set_aspect("auto")
     plt.tight_layout()
-    plt.show()
+    return fig
+
+
+if __name__ == "__main__":
+    # Example usage
+    agent = kmeans_main(
+        dataset=Path(
+            "/Users/phillipmaffettone/Development/beamline-profiles/pdf-agents/pdf_agents/scratch/ds_AlLiFe_complex_21Sep2024_12-04-04.nc"
+        ).expanduser(),
+        data_array_string="iq",
+        k_clusters=6,
+        resolution=0.05,
+        bounds=[[-29, 29], [-29, 29]],
+        init_points=200,
+        n_steps=20,
+    )
+    print("Experimnent Done")
+
+    # Plotting
+    fig = kmeans_plotting(agent)
+    fig.show()
     print("Plotting Done")
