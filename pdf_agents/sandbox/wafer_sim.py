@@ -205,7 +205,9 @@ class WaferClusterAgent(WaferAgentBase):
         else:
             # assume a 2d scan, use a linear model to predict the uncertainty
             labels = self.model.predict(sorted_observables)
-            proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(self.grid)
+            proby_preds = (
+                LogisticRegression(solver="newton-cg").fit(sorted_independents, labels).predict_proba(self.grid)
+            )  # TODO: NOTE THIS CHANGE
             shannon = -np.sum(proby_preds * np.log(proby_preds), axis=-1)  # TODO: NOTE THIS CHANGE
             top_indicies = (
                 np.argsort(shannon)[::-1] if batch_size is None else np.argsort(shannon)[-batch_size:]
@@ -313,7 +315,7 @@ if __name__ == "__main__":
     sorted_independents, sorted_observables = agent._construct_model()
     centers = agent.model.cluster_centers_
     labels = agent.model.predict(sorted_observables)
-    proby_preds = LogisticRegression().fit(sorted_independents, labels).predict_proba(agent.grid)
+    proby_preds = LogisticRegression(solver="newton-cg").fit(sorted_independents, labels).predict_proba(agent.grid)
     shannon = -np.sum(proby_preds * np.log(proby_preds), axis=-1)
     num_classes = proby_preds.shape[1]
     fig, axes = plt.subplots(2, 4, figsize=(20, 10))
