@@ -9,13 +9,18 @@ import numpy as np
 import torch
 import xarray as xr
 from bluesky_adaptive.agents.sklearn import ClusterAgentBase
+from botorch import fit_gpytorch_mll
+from botorch.acquisition import UpperConfidenceBound
+from botorch.models import SingleTaskGP
+from botorch.utils.transforms import normalize, standardize, unnormalize
+from gpytorch import ExactMarginalLogLikelihood
 from numpy.polynomial.polynomial import polyfit, polyval
 from numpy.typing import ArrayLike
 from scipy.stats import rv_discrete
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 
-from pdf_agents.scientific_value import ScientificValueAgentBase, scientific_value_function
+from pdf_agents.scientific_value import ScientificValueAgentBase
 from pdf_agents.utils import discretize, make_hashable, make_wafer_grid_list
 
 logger = logging.getLogger(__name__)
@@ -94,7 +99,8 @@ class WaferAgentBase(ABC):
                 _doc = self.tell(point, observation)
                 self._doc_cache.append(("tell", _doc))
 
-        for _ in range(n_steps):
+        for i in range(n_steps):
+            print(f"step {i}")
             self._experiment_step()
 
     def measurement_plan(self, *args, **kwargs):
@@ -254,6 +260,7 @@ class SVAgent(WaferAgentBase):
         self,
         *,
         bounds: torch.Tensor,
+        resolution: float,
         device: torch.device = None,
         num_restarts: int = 10,
         raw_samples: int = 128,
@@ -264,6 +271,7 @@ class SVAgent(WaferAgentBase):
         super().__init__(**kwargs)
         self.independent_cache = []
         self.observable_cache = []
+        self.tell_cache = [0.0]
         self.observable_distance_function = observable_distance_function
 
         self.device = (
@@ -276,6 +284,8 @@ class SVAgent(WaferAgentBase):
         self.num_restarts = num_restarts
         self.raw_samples = raw_samples
         self.ucb_beta = ucb_beta
+        self._motor_origins = np.array([0.0, 0.0])
+        self.motor_resolution = resolution
 
     def ask(self, batch_size: int):
         return ScientificValueAgentBase.ask(self, batch_size)
@@ -349,22 +359,110 @@ def kmeans_plotting(agent):
     return fig
 
 
+def sva_main(*, dataset, data_array_string, bounds, resolution, init_points=20, n_steps=200, **kwargs):
+    time = ttime.time()
+    agent = SVAgent(
+        dataset=dataset, data_array_string=data_array_string, bounds=bounds, resolution=resolution, **kwargs
+    )
+    agent.experiment(n_steps, init_points=init_points)
+    print(f"Time taken: {ttime.time() - time}")
+    print("Experimnent Done")
+    return agent
+
+
+def sva_plotting(agent):
+
+    value = agent._value_function(np.array(agent.independent_cache), np.array(agent.observable_cache))
+    value = value.reshape(-1, 1)
+
+    train_x = torch.tensor(agent.independent_cache, dtype=torch.double, device=agent.device)
+    if train_x.dim() == 1:
+        train_x = train_x.view(-1, 1)
+    norm_bounds = torch.stack([train_x.min(dim=0).values, train_x.max(dim=0).values])
+    train_x = normalize(train_x, norm_bounds)
+    train_y = standardize(torch.tensor(value, dtype=torch.double, device=agent.device))
+    gp = SingleTaskGP(train_x, train_y)
+    mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
+    fit_gpytorch_mll(mll)
+    acq = UpperConfidenceBound(gp, beta=agent.ucb_beta)
+    grid = normalize(
+        torch.tensor(make_wafer_grid_list(*agent.bounds.cpu().numpy().ravel(), step=agent.motor_resolution))[
+            :, None, :
+        ],
+        norm_bounds,
+    )
+    preds = gp.posterior(grid)
+    acq_grid = acq(grid)
+
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    axes = axes.ravel()
+    # Bring grid back
+    grid = unnormalize(grid, norm_bounds)
+
+    axes[0].set_title("Observations and Order")
+    sc = axes[0].scatter(*np.array(agent.independent_cache).T, c=range(len(agent.independent_cache)))
+    plt.colorbar(sc, ax=axes[0])
+
+    axes[1].set_title("Current Value Measured")
+    sc = axes[1].scatter(*np.array(agent.independent_cache).T, c=value.reshape(-1))
+    plt.colorbar(sc, ax=axes[1])
+
+    axes[2].set_title("Value Prediction")
+    sc = axes[2].scatter(
+        grid.squeeze()[:, 0], grid.squeeze()[:, 1], c=preds.mean.cpu().detach().numpy().reshape(-1)
+    )
+    plt.colorbar(sc, ax=axes[2])
+
+    axes[3].set_title("Value Prediction Uncertainty")
+    sc = axes[3].scatter(
+        grid.squeeze()[:, 0], grid.squeeze()[:, 1], c=preds.variance.cpu().detach().numpy().reshape(-1)
+    )
+    plt.colorbar(sc, ax=axes[3])
+
+    axes[4].set_title("Upper Confidence Bound")
+    sc = axes[4].scatter(grid.squeeze()[:, 0], grid.squeeze()[:, 1], c=acq_grid.cpu().detach().numpy().reshape(-1))
+    plt.colorbar(sc, ax=axes[4])
+
+    # Add circle
+    radius = 30
+    theta = np.linspace(0, 2 * np.pi, 100)
+    x = radius * np.cos(theta)
+    y = radius * np.sin(theta)
+    for ax in axes:
+        ax.set_aspect("equal")
+        ax.plot(x, y, color="black")
+
+    return fig
+
+
 if __name__ == "__main__":
     # Example usage
-    agent = kmeans_main(
+    # agent = kmeans_main(
+    #     dataset=Path(
+    #         "/Users/phillipmaffettone/Development/beamline-profiles/pdf-agents/pdf_agents/scratch/ds_AlLiFe_complex_21Sep2024_12-04-04.nc"
+    #     ).expanduser(),
+    #     data_array_string="iq",
+    #     k_clusters=6,
+    #     resolution=0.05,
+    #     bounds=[[-29.5, 29.5], [-29.5, 29.5]],
+    #     init_points=10,
+    #     n_steps=590,
+    # )
+    agent = sva_main(
         dataset=Path(
             "/Users/phillipmaffettone/Development/beamline-profiles/pdf-agents/pdf_agents/scratch/ds_AlLiFe_complex_21Sep2024_12-04-04.nc"
         ).expanduser(),
         data_array_string="iq",
-        k_clusters=6,
+        bounds=[[-29.0, 29.0], [-29.0, 29.0]],
         resolution=0.05,
-        bounds=[[-30, 30], [-30, 30]],
-        init_points=500,
-        n_steps=20,
+        init_points=20,
+        n_steps=500,
+        ucb_beta=100.0,
     )
     print("Experimnent Done")
 
     # Plotting
-    fig = kmeans_plotting(agent)
-    fig.show()
+    # fig = kmeans_plotting(agent)
+    fig = sva_plotting(agent)
+    fig.savefig("/Users/phillipmaffettone/Downloads/plot.png")
     print("Plotting Done")
