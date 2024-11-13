@@ -300,6 +300,45 @@ class SVAgent(WaferAgentBase):
         return ScientificValueAgentBase._value_function(self, X, Y)
 
 
+from scipy.spatial import distance_matrix
+
+
+def symmetric_value_function(X, Y):
+    """A similar value function to the asymmetric ``value_function``.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+    Y : numpy.ndarray
+
+    Returns
+    -------
+    array_like
+        The value for each data point.
+    """
+
+    X_dist = distance_matrix(X, X)  # (N, N)
+
+    distance = X_dist.copy()
+    sd = np.nanmin(np.where(distance == 0, np.nan, distance), axis=1, keepdims=True)  # (N, 1)
+
+    # Length scale
+    ls = sd * sd.T  # Symmetric piece (N, 1) * (1, N) = (N, N)
+
+    Y_dist = distance_matrix(Y, Y)
+
+    v = Y_dist * np.exp(-(X_dist**2) / ls / 2.0)
+
+    return v.mean(axis=1)
+
+
+class SymmetricSVAgent(SVAgent):
+    def _value_function(self, X, Y):
+        if len(X.shape) == 1:
+            X = X.reshape(-1, 1)
+        return symmetric_value_function(X, Y)
+
+
 def kmeans_main(*, dataset, data_array_string, k_clusters, resolution, bounds, init_points=20, n_steps=200):
     time = ttime.time()
     agent = WaferClusterAgent(
@@ -361,7 +400,7 @@ def kmeans_plotting(agent):
 
 def sva_main(*, dataset, data_array_string, bounds, resolution, init_points=20, n_steps=200, **kwargs):
     time = ttime.time()
-    agent = SVAgent(
+    agent = SymmetricSVAgent(
         dataset=dataset, data_array_string=data_array_string, bounds=bounds, resolution=resolution, **kwargs
     )
     agent.experiment(n_steps, init_points=init_points)
@@ -456,7 +495,7 @@ if __name__ == "__main__":
         bounds=[[-29.0, 29.0], [-29.0, 29.0]],
         resolution=0.05,
         init_points=20,
-        n_steps=500,
+        n_steps=100,
         ucb_beta=100.0,
     )
     print("Experimnent Done")
